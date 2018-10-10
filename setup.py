@@ -11,7 +11,7 @@ setup(
     description = "GPG encrypted backups on telegram",
     long_description = long_description,
     long_description_content_type = "text/markdown",
-    url = "https://github.com/tallero/trovotutto",
+    url = "https://github.com/tallero/PGPgram",
     packages = find_packages(),
     package_data = {
         '': ['libtdjson.so'],
