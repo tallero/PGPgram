@@ -22,9 +22,11 @@
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
+import inspect
 import logging
 import pickle
 import string
+import sys
 from os.path import exists, dirname, realpath, abspath
 from os import chdir as cd
 from os import listdir as ls
@@ -81,6 +83,11 @@ def random_id(N):
         (str) random alphanumeric string 
     """
     return ''.join(random().choice(string.ascii_letters + string.digits) for _ in range(N))
+
+class MessageInException(Exception):
+    def __init__(self, msg):
+        print("{0}".format(msg))
+        pass
 
 class Db:
     """The data handling object for pgpgram.
@@ -188,7 +195,9 @@ class Backup:
 
             # Process document
             self.document = self.process_file(f, ignore_duplicate=ignore_duplicate, verbose=verbose)
-       
+            if not self.document:
+                raise MessageInException(f + ': already backed up')
+ 
             # Encrypt document
             encrypted = self.db.cache_path +"/"+ self.document["name"] + ".gpg"
             self.encrypt(f, self.document["passphrase"], output=encrypted)
@@ -216,10 +225,9 @@ class Backup:
             td.destroy(td.client)
             cd(current_path)
 
-        except Exception as e:
+        except MessageInException as e:
             # Close client
             cd(current_path)
-            logging.exception('message')
 
 
     def process_file(self, f, ignore_duplicate=False, verbose=0):
@@ -246,12 +254,8 @@ class Backup:
                 print(color.BOLD + color.BLUE + k + ": " + color.END + str(document[k]))
 
         if not ignore_duplicate:
-            try:
-                if document["hash"] in (doc["hash"] for doc in self.db.files):
-                    raise Exception
-            except:
-               print(color.BOLD + "\nfile already backed up" + color.END) 
-               exit()
+            if document["hash"] in (doc["hash"] for doc in self.db.files):
+                return False
         return document
 
     def hash(self, f):
