@@ -11,7 +11,7 @@
 
 I've come to hate telegram. At the beginning, they were like "we're gonna open source everything after some time, we care about privacy", then
 
-- they [never](https://twitter.com/ch3ckmat3/status/517144635466989568) [released](https://twitter.com/RebRied/status/555398577351315456) [the source](https://twitter.com/moxie/status/582276833082650625) [of the server](https://twitter.com/AlexeyMetz/status/583122792654213120) (over 5 years have passed),
+- they've [never](https://twitter.com/ch3ckmat3/status/517144635466989568) [released](https://twitter.com/RebRied/status/555398577351315456) [the source](https://twitter.com/moxie/status/582276833082650625) [of the server](https://twitter.com/AlexeyMetz/status/583122792654213120) (over 5 years have passed),
 
 - they didn't improve secret chats algorithm so that it could be the default way of sending messages without lacking features (going instead with a *curious*, to say the least [apology](https://telegra.ph/Why-Isnt-Telegram-End-to-End-Encrypted-by-Default-08-14) of unecrypted [remote storage](https://xkcd.com/908/), despite aknowledging the existence of credential recovery [schemes](https://postmarkapp.com/guides/password-reset-email-best-practices) secure at least as their [authentication](https://www.theverge.com/2017/9/18/16328172/sms-two-factor-authentication-hack-password-bitcoin);
 
@@ -21,10 +21,10 @@ I've come to hate telegram. At the beginning, they were like "we're gonna open s
 
 - their positions is not so much clear; regarding copyright infringements they put theirselves in a gray area; having strong opinions on the matter I am concerned that there exist loopholes in their statements.
 
-So now telegram boasts itself as a privacy champion in the instant messaging space, although previous points tell us quite the opposite. Also, their press material is always very careful with words, so that their statements can easily mislead uninformed users to think that their service is secure:
+So now telegram boasts itself as a privacy champion in the instant messaging space, although previous points tell us quite the opposite. Also, their press material is always very careful with words, so that their statements can easily lead uninformed users to think that their service is secure:
 they don't mention that's as true as when you say that Skype is secure, not as when you say that *GNUpg is secure* and you should know [why](https://en.wikipedia.org/wiki/Security_through_obscurity).
 
-## So why did I wrote PGPgram?
+## So why did I write PGPgram?
 I wrote it as proof-of-concept to show that it could be easy to have (whatever) encryption implemented by default on telegram.
 Not that counts anyway, because telegram API [terms of services](https://core.telegram.org/api/terms) indirectly prohibit use of encryption over its servers:
 
@@ -32,7 +32,7 @@ Not that counts anyway, because telegram API [terms of services](https://core.te
 
 which is indeed what an encrypted by default version of telegram would do, even by keeping retrocompatibility.
 
-I have to make you notice that PGPgram does not violate that rule, since the contents it produce are not meant to be shared with other telegram users.
+It should be noted notice that PGPgram does not violate that rule, since the contents it produce are not meant to be shared with other telegram users.
 
 At the time of writing it would be just a matter of time to convert PGPgram to a full fledged telegram client, using other encryption schemes that preserve message sharing among devices, forward secrecy or secret group chats and bots.
 
@@ -52,7 +52,7 @@ After setting up pip, you can install *PGPgram* by simply typing in your termina
 
 ![PGPgram search](https://raw.githubusercontent.com/tallero/PGPgram/master/screenshots/pgpgram-search.gif)
 
-The application requires `split`, `cat`, `dd`, `sha256sum` and `gpg` to be present on your system, so maybe macOS users will need to make some aliases. At the moment file deletion is not handled because I reached time limit for developing.
+The application requires `split`, `cat`, `dd`, `sha256sum` and `gpg` to be present on your system, so maybe macOS users will need to make some aliases. At the moment file deletion is not handled because I reached time limit for unpaid development.
 
 ## About
 
