@@ -3,7 +3,7 @@
 [![Python 3.x Support](https://img.shields.io/pypi/pyversions/Django.svg)](https://python.org)
 [![License: GPL v3+](https://img.shields.io/badge/license-GPL%20v3%2B-blue.svg)](http://www.gnu.org/licenses/gpl-3.0) 
 
-![PGPgram example usage](screenshots/pgpgram-in-action.gif)
+![PGPgram example usage](https://raw.githubusercontent.com/tallero/PGPgram/master/screenshots/pgpgram-in-action.gif)
 
 *PGPgram* is a [GPG](https://gnupg.org) encrypted backup/restore tool written in `python` using [TDLib](https://github.com/tdlib/td). It locally encrypts your files with GnuPG, before they get sent to telegram cloud.
 
@@ -50,7 +50,7 @@ After setting up pip, you can install *PGPgram* by simply typing in your termina
 
     pgpgram <command> --help
 
-![PGPgram search](screenshots/pgpgram-search.gif)
+![PGPgram search](https://raw.githubusercontent.com/tallero/PGPgram/master/screenshots/pgpgram-search.gif)
 
 The application requires `split`, `cat`, `dd`, `sha256sum` and `gpg` to be present on your system, so maybe macOS users will need to make some aliases. At the moment file deletion is not handled because I reached time limit for developing.
 
