@@ -20,8 +20,8 @@ setup(
         'console_scripts': ['pgpgram = pgpgram:main']
     },
     install_requires = [
-    #'trovotutto',
-    #'pyxdg',
+    'trovotutto',
+    'pyxdg',
     ],
     classifiers = [
         "Programming Language :: Python :: 3",
