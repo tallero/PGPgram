@@ -34,6 +34,7 @@ from os import remove as rm
 from os import mkdir, symlink, getcwd
 from pprint import pprint
 from random import SystemRandom as random
+from setproctitle import setproctitle
 from subprocess import Popen, PIPE
 from subprocess import check_output as sh
 
@@ -45,6 +46,8 @@ from .td import Td
 from .color import Color
 
 name = "pgpgram"
+
+setproctitle(name)
 
 color = Color()
 

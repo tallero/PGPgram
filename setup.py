@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name = "PGPgram",
-    version = "0.1.2",
+    version = "0.1.3",
     author = "Pellegrino Prevete",
     author_email = "pellegrinoprevete@gmail.com",
     description = "GPG encrypted backups on telegram",
@@ -20,6 +20,7 @@ setup(
         'console_scripts': ['pgpgram = pgpgram:main']
     },
     install_requires = [
+    'setproctitle',
     'trovotutto',
     'pyxdg',
     ],
