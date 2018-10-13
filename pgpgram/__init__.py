@@ -152,8 +152,8 @@ class Db:
             print(color.GRAY + f + color.END + "\n")
         if results != []:
             choice = int(input("Select file to restore (number): "))
-        f = [d for d in self.files if d['path'] == results[choice]][-1]["name"]
-        restore = Restore(f, download_directory=getcwd(), verbose=verbose) 
+            f = [d for d in self.files if d['path'] == results[choice]][-1]["name"]
+            restore = Restore(f, download_directory=getcwd(), verbose=verbose) 
 
 class Backup:
     """Handles backup file function
