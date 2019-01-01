@@ -46,6 +46,7 @@ from .td import Td
 from .color import Color
 
 name = "pgpgram"
+version = "0.1.4"
 
 setproctitle(name)
 
@@ -172,7 +173,7 @@ class Backup:
                                - 3 to 5 are specific to tdjson.
     """
 
-    def __init__(self, f, ignore_duplicate=False, size=100, verbose=2):
+    def __init__(self, f, ignore_duplicate=False, size='100', verbose=2):
 
         try:
             f = abspath(f)
@@ -533,21 +534,22 @@ OPTIONS:
 
     parser = ArgumentParser(description="PGP encrypted backups on Telegram Cloud")
     parser.add_argument('--verbose', dest='verbose', action='store_true', default=False, help="extended output")
-    commands = parser.add_subparsers(dest="commands")
+    parser.add_argument('--version', dest='version', action='store_true', default=False, help="print version")
+    command = parser.add_subparsers(dest="command")
 
-    backup = commands.add_parser('backup', help="backup file")
+    backup = command.add_parser('backup', help="backup file")
     backup.add_argument('filename', nargs='+', action='store', help="exact name of the file to back up; default: same name")
     backup.add_argument('--size', dest='size', nargs=1, action="store", default=[100], help="specify size of the chunks the file will be split; default: 100M")
     backup.add_argument('--ignore-duplicate', dest='duplicate', action='store_true', default=False, help="backup file even if already present in the database; default: No")
 
-    restore = commands.add_parser('restore', help="restore file")
+    restore = command.add_parser('restore', help="restore file")
     restore.add_argument('filename', nargs='+', action='store', help="exact name of the file to be restored")
     restore.add_argument('--download-directory', dest='download_dir', nargs=1, action="store", default=[getcwd()], help="directory in which to save the file; default: current dir") 
 
-    list_command = commands.add_parser('list', help="show all backed up files in location")
+    list_command = command.add_parser('list', help="show all backed up files in location")
     list_command.add_argument('pattern', nargs='?', default='', help="the files start with this pattern")
  
-    search = commands.add_parser('search', help="search and eventually download a backed up file")
+    search = command.add_parser('search', help="search and eventually download a backed up file")
     search.add_argument('query', nargs='+', action='store', help="what to search")
     search.add_argument('--path', dest='path', nargs=1, action="store", default=[getcwd()], help="specify the path in which the results were when backed up; default: current dir")
     search.add_argument('--filetype', dest='filetype', nargs=1, action="store", default=["any"], help="any, images, documents, code, audio, video")
@@ -555,21 +557,24 @@ OPTIONS:
     search.add_argument('--exclude', dest='exclude', nargs='+', help="exclude from results files with the given extensions", action="store", default=[])
     args = parser.parse_args()
 
+    if args.version:
+        print(version)
+
     if args.verbose:
         print(args)
         verbose = 2
     else:
         verbose = 0
 
-    if args.commands == "backup":
+    if args.command == "backup":
         for f in args.filename:
             backup = Backup(f, ignore_duplicate=args.duplicate, size=str(args.size[0]), verbose=verbose)
 
-    if args.commands == "restore":
+    if args.command == "restore":
         for f in args.filename:
             restore = Restore(f, download_directory=args.download_dir[0], verbose=verbose)
 
-    if args.commands == "list":
+    if args.command == "list":
         db = Db()
         docs = [d for d in db.files if d['path'].startswith(getcwd() + "/" + args.pattern)]
         if args.verbose:
@@ -580,10 +585,9 @@ OPTIONS:
                 results = results + d['path'] + '\n'
             print(results)
 
-    if args.commands == "search":
+    if args.command == "search":
         query = args.query[0]
         for w in args.query[1:]:
             query = query + " " + w
         db = Db()
-        print("arg path", args.path)
         search = db.search(query, filetype=args.filetype[0], path=args.path[0], results_number=int(args.results), verbose=verbose)
