@@ -27,7 +27,7 @@ import logging
 import pickle
 import string
 import sys
-from os.path import exists, dirname, realpath, abspath
+from os.path import basename, exists, dirname, realpath, abspath
 from os import chdir as cd
 from os import listdir as ls
 from os import remove as rm
@@ -176,11 +176,11 @@ class Backup:
     def __init__(self, f, ignore_duplicate=False, size='100', verbose=2):
 
         try:
+            current_path = getcwd()
             f = abspath(f)
             self.verbose = verbose
             # Open database
             self.db = Db(verbose)
-            current_path = getcwd()
             cd(self.db.config_path)
 
             # Instantiates telegram client
@@ -232,7 +232,6 @@ class Backup:
         except MessageInException as e:
             # Close client
             cd(current_path)
-
 
     def process_file(self, f, ignore_duplicate=False, verbose=0):
         """Extract data from the file for insert in the database
@@ -362,13 +361,13 @@ class Backup:
                  return True
             
         if event['@type'] == 'updateMessageSendSucceeded':
-            if self.verbose >= 2:
+            if self.verbose >= 1:
                 pprint(event)
             content = event['message']['content']
             if content['@type'] == 'messageDocument' and content['document']['@type'] == 'document':
                 document = content['document']['document']
                 if document['@type'] == 'file': 
-                    if self.current_upload == document['local']['path']:
+                    if self.hash(self.current_upload) == self.hash(document['local']['path']):
                         if document['remote']['is_uploading_completed']:
                             if self.verbose > 0:
                                 print(color.BOLD + self.current_upload + color.END + ": upload completed")
