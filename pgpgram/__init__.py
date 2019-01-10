@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 #    PGPgram
 #
 #    ----------------------------------------------------------------------
-#    Copyright © 2018  Pellegrino Prevete
+#    Copyright © 2018, 2019  Pellegrino Prevete
 #
 #    All rights reserved
 #    ----------------------------------------------------------------------
 #
 #    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU General Public License as published by
+#    it under the terms of the GNU Affero General Public License as published by
 #    the Free Software Foundation, either version 3 of the License, or
 #    (at your option) any later version.
 #
 #    This program is distributed in the hope that it will be useful,
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
+#    GNU Affero General Public License for more details.
 #
-#    You should have received a copy of the GNU General Public License
+#    You should have received a copy of the GNU Affero General Public License
 #    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 
@@ -46,7 +47,7 @@ from .td import Td
 from .color import Color
 
 name = "pgpgram"
-version = "0.1.4"
+version = "0.1.5"
 
 setproctitle(name)
 
@@ -157,20 +158,20 @@ class Db:
             restore = Restore(f, download_directory=getcwd(), verbose=verbose) 
 
 class Backup:
-    """Handles backup file function
+    """Backup file on telegram
 
     It encrypts, split and then upload files to Telegram clouds.
-    Communication with telegram happens through Td class, which is a poorly written
+    Communication with telegram happens through :doc:`Td <./pgpgram.td>` class, which is a poorly written
     wrapper around libtdjson. Backups uniqueness is obtained through sha256sums.
 
     Args:
         f (str): path of the file to backup;
         ignore_duplicate (bool): create duplicate backup;
         size (int): specify size of the chunks the file will be split; 
-        verbose (int): integer indicating level of verbose:
-                               - 1 just pgpgram verbose
-                               - 2 include tdjson verbose
-                               - 3 to 5 are specific to tdjson.
+        verbose (int): integer indicating level of verbose
+            * 1 just pgpgram verbose
+            * 2 include tdjson verbose
+            * 3 to 5 are specific to tdjson.
     """
 
     def __init__(self, f, ignore_duplicate=False, size='100', verbose=2):
@@ -179,8 +180,8 @@ class Backup:
             current_path = getcwd()
             f = abspath(f)
             self.verbose = verbose
-            # Open database
             self.db = Db(verbose)
+            """Database class instance"""
             cd(self.db.config_path)
 
             # Instantiates telegram client
@@ -196,7 +197,6 @@ class Backup:
                       "backups to be stored.")
                 td.cycle(self.find_backup_chat)
             chat_id = self.db.config['backup chat id']
-
             # Process document
             self.document = self.process_file(f, ignore_duplicate=ignore_duplicate, verbose=verbose)
             if not self.document:
@@ -207,7 +207,7 @@ class Backup:
             self.encrypt(f, self.document["passphrase"], output=encrypted)
 
             # Split document
-            chunk_prefix = self.db.cache_path +"/"+ self.document['id']
+            chunk_prefix = self.db.cache_path +"/"+ self.document["id"]
             self.document["pieces"] = self.split(encrypted, output=chunk_prefix, size=size)
             # Send files
             for i in range(self.document["pieces"]):

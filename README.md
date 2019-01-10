@@ -1,7 +1,7 @@
 # PGPgram
 
 [![Python 3.x Support](https://img.shields.io/pypi/pyversions/Django.svg)](https://python.org)
-[![License: GPL v3+](https://img.shields.io/badge/license-GPL%20v3%2B-blue.svg)](http://www.gnu.org/licenses/gpl-3.0) 
+[![License: AGPL v3+](https://img.shields.io/badge/license-AGPL%20v3%2B-blue.svg)](http://www.gnu.org/licenses/agpl-3.0) 
 
 ![PGPgram example usage](https://raw.githubusercontent.com/tallero/PGPgram/master/screenshots/pgpgram-in-action.gif)
 
@@ -56,7 +56,7 @@ The application requires `split`, `cat`, `dd`, `sha256sum` and `gpg` to be prese
 
 ## About
 
-This program is licensed under [GNU General Public License v3 or later](https://www.gnu.org/licenses/gpl-3.0.en.html) by [Pellegrino Prevete](http://prevete.ml).<br>
+This program is licensed under [GNU Affero General Public License v3 or later](https://www.gnu.org/licenses/gpl-3.0.en.html) by [Pellegrino Prevete](http://prevete.ml).<br>
 TDLib is licensed under the terms of the [Boost Software License](http://www.boost.org/LICENSE_1_0.txt).<br>
 If you find this program useful, consider offering me a [beer](https://patreon.com/tallero), a new [computer](https://patreon.com/tallero) or a part time remote [job](mailto:pellegrinoprevete@gmail.com) to help me pay the bills.
 
