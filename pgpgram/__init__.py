@@ -25,21 +25,22 @@
 
 import inspect
 import logging
-import pickle
 import string
-import sys
-from os.path import basename, exists, dirname, isfile, isdir, realpath, abspath
+from os.path import abspath, basename, exists, dirname, getsize, isfile, isdir, realpath
 from os.path import join as path_join
 from os import chdir as cd
 from os import listdir as ls
 from os import remove as rm
 from os import mkdir, symlink, getcwd
 from os import walk
+from pickle import dump as pickle_dump
+from pickle import load as pickle_load
 from pprint import pprint
 from random import SystemRandom as random
 from setproctitle import setproctitle
 from subprocess import Popen, PIPE
 from subprocess import check_output as sh
+from subprocess import getoutput
 
 from argparse import ArgumentParser
 from trovotutto import PGPgramDb, Index
@@ -63,7 +64,7 @@ def save(variable, path):
         path (str): path of the output
     """
     with open(path, 'wb') as f:
-        pickle.dump(variable, f)
+        pickle_dump(variable, f)
     f.close()
 
 def load(path):
@@ -76,7 +77,7 @@ def load(path):
         variable read from path
     """
     with open(path, 'rb') as f:
-        variable = pickle.load(f)
+        variable = pickle_load(f)
     f.close()
     return variable
 
@@ -121,27 +122,49 @@ class Db:
 
         # Load configuration from disk into 'config' attribute
         try:
-            self.config = load(self.config_path + "/config.pkl")
+            self.config = load(path_join(self.config_path, "config.pkl"))
+
         except FileNotFoundError as e:
+            # Init configuration
             if verbose > 0:
-                pprint("config pickle not found in path, initializing")
+                pprint("Config file not found in path, initializing")
+
             self.config = {"db key":random_id(20)}
-            if not exists(self.data_path + "/index"):
-                mkdir(self.data_path + "/index")
-            if not exists(self.data_path + "/tdlib"):
-                mkdir(self.data_path + "/tdlib")
-                mkdir(self.cache_path + "/documents")
-                symlink(self.data_path + "/tdlib", self.config_path + "/tdlib")
-                symlink(self.cache_path + "/documents", self.data_path + "/tdlib/documents")
+
+            # Paths
+            index_dir = path_join(self.data_path, "index")
+            tdlib_dir = path_join(self.data_path, 'tdlib')
+            tdlib_config_symlink = path_join(self.config_path, "tdlib")
+            tdlib_documents_dir = path_join(self.cache_path, "documents")
+            tdlib_documents_symlink = path_join(tdlib_dir, "documents")
+
+            # Init paths
+            if not exists(index_dir):
+                mkdir(index_dir)
+
+            if not exists(tdlib_dir):
+                mkdir(tdlib_dir)
+                mkdir(tdlib_documents_dir)
+                symlink(tdlib_dir, tdlib_config_symlink)
+                symlink(tdlib_documents_dir, tdlib_documents_symlink)
+
+        # Load index
         try:
-            self.index = load(self.data_path + "/index.pkl")
+            self.index = load(path_join(self.data_path, "index.pkl"))
         except:
             if verbose > 0:
                  print("index still not built")
         self.save()
 
     def save(self):
-        """Save Db"""
+        """Save db
+
+            Formats db in a format compatible with trovotutto,
+            builds the trovotutto index and then save the following to disk:
+            - search index
+            - files list
+            - configuration
+        """
         pgpgram_db = PGPgramDb(self, filetype="any", exclude=[], update=True)
         self.index = Index(pgpgram_db, slb=3, verbose=self.verbose)
         save(self.index, path_join(self.data_path, "index.pkl"))
@@ -166,7 +189,15 @@ class Db:
 
         results = self.index.search(query)
 
-        for i,f in enumerate(results[:results_number]):
+        self.display_results(results[:results_number])
+
+        if results != []:
+            choice = int(input("Select file to restore (number): "))
+            f = [d for d in self.files if d['path'] == results[choice]][-1]["name"]
+            restore = Restore(f, download_directory=getcwd(), verbose=verbose) 
+
+    def display_results(self, results):
+        for i,f in enumerate(results):
             g = f.split("/")
             title_string = "{}{}. {}{}{}".format(color.GREEN + color.BOLD,
                                                  i,
@@ -179,10 +210,6 @@ class Db:
             print(title_string)
             print(subtitle_string)
 
-        if results != []:
-            choice = int(input("Select file to restore (number): "))
-            f = [d for d in self.files if d['path'] == results[choice]][-1]["name"]
-            restore = Restore(f, download_directory=getcwd(), verbose=verbose) 
 
 class Backup:
     """Backup file on telegram
@@ -230,15 +257,25 @@ class Backup:
                 raise MessageInException(f + ': already backed up')
  
             # Encrypt document
-            encrypted = self.db.cache_path +"/"+ self.document["name"] + ".gpg"
+            encrypted = path_join(self.db.cache_path, '.'.join([self.document["name"], "gpg"]))
             self.encrypt(f, self.document["passphrase"], output=encrypted)
 
             # Split document
-            chunk_prefix = self.db.cache_path +"/"+ self.document["id"]
-            self.document["pieces"] = self.split(encrypted, output=chunk_prefix, size=size)
+            if 'format version' in self.document.keys():
+                if self.document['format version'] == 2:
+                    digits = 6
+            else:
+                digits = 2
+            chunk_prefix = path_join(self.db.cache_path, self.document["id"])
+            split = {'args':[encrypted],
+                     'kwargs':{'output': chunk_prefix,
+                               'size': size,
+                               'digits': digits}}
+            self.document["pieces"] = self.split(*split['args'], **split['kwargs']) 
+
             # Send files
             for i in range(self.document["pieces"]):
-                self.current_upload = chunk_prefix + str(i).zfill(2)
+                self.current_upload = chunk_prefix + str(i).zfill(digits)
                 self.uploaded = False
                 td.send_file_message(chat_id, self.current_upload)
                 td.cycle(self.sent)
@@ -246,7 +283,7 @@ class Backup:
             # Cleaning
             rm(encrypted)
             for i in range(self.document["pieces"]):
-                rm(chunk_prefix + str(i).zfill(2))
+                rm(chunk_prefix + str(i).zfill(digits))
                
             # Saving 
             self.db.files.append(self.document)
@@ -278,6 +315,8 @@ class Backup:
         document["passphrase"] = random_id(200)
         document["chat id"] = self.db.config["backup chat id"]
         document['messages id'] = []
+        document['size'] = getsize(f)
+        document['format version'] = 2
 
         if verbose >= 1:
             for k in document.keys():
@@ -340,7 +379,7 @@ class Backup:
                     output+'.tar',
                     f])
 
-    def split(self, f, output, size='100'):
+    def split(self, f, output, size='100', digits=6):
         """split file using GNU split
 
         Args:
@@ -348,13 +387,19 @@ class Backup:
             output (str): name of the output files (they will be outputXX with XX numbers)
             size (float): size of the splitted chunks (optional)
         """
-        sh(['split',
-            '--bytes',
-            size+'MB',
-            '-d',
-            f,
-            output
-            ])
+        try:
+            out = sh(['split',
+                             '--bytes',
+                             '{}MB'.format(size),
+                             '--suffix-length',
+                             '{}'.format(digits),
+                             '-d',
+                             "{}".format(f),
+                             "{}".format(output)
+                             ])
+        except Exception as e:
+            print(e)
+            print(out)
         return len([piece for piece in ls(self.db.cache_path) if output.split("/")[-1] in piece])
 
     def find_backup_chat(self, td, event):
@@ -456,7 +501,7 @@ class Restore:
                 td.cycle(self.downloaded)
 
             # Concatenate file chunks
-            output = self.download_directory +"/"+ self.document["name"]
+            output = path_join(self.download_directory, self.document["name"])
             encrypted = output + ".gpg"
             self.cat(self.download_paths, encrypted)
 
