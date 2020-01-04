@@ -275,7 +275,7 @@ class Backup:
         document["hash"] = self.hash(f)
         document["path"] = f
         document["id"] = random_id(20)
-        document["passphrase"] = random_id(20)
+        document["passphrase"] = random_id(200)
         document["chat id"] = self.db.config["backup chat id"]
         document['messages id'] = []
 
