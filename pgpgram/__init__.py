@@ -358,7 +358,15 @@ class Backup:
                    '--passphrase',
                    passphrase,
                    '--cipher-algo',
-                   'AES256', 
+                   'AES256',
+                   '--s2k-mode',
+                   '{}'.format(3),
+                   '--s2k-count',
+                   '{}'.format(65011712),
+                   '--s2k-digest-algo',
+                   'SHA512',
+                   '--s2k-cipher-algo',
+                   'AES256',
                    f])
 
     def compress(self, f, output=None):
