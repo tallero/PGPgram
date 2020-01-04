@@ -4,7 +4,7 @@
 #    PGPgram
 #
 #    ----------------------------------------------------------------------
-#    Copyright © 2018, 2019  Pellegrino Prevete
+#    Copyright © 2018, 2019, 2020  Pellegrino Prevete
 #
 #    All rights reserved
 #    ----------------------------------------------------------------------
@@ -28,11 +28,13 @@ import logging
 import pickle
 import string
 import sys
-from os.path import basename, exists, dirname, realpath, abspath
+from os.path import basename, exists, dirname, isfile, isdir, realpath, abspath
+from os.path import join as path_join
 from os import chdir as cd
 from os import listdir as ls
 from os import remove as rm
 from os import mkdir, symlink, getcwd
+from os import walk
 from pprint import pprint
 from random import SystemRandom as random
 from setproctitle import setproctitle
@@ -108,12 +110,16 @@ class Db:
 
     def __init__(self, verbose=0):
         self.verbose = verbose
+
+        # Load files list from disk into 'files' attribute
         try:
-            self.files = load(self.config_path + "/files.pkl")
+            self.files = load(path_join(self.config_path, "files.pkl"))
         except FileNotFoundError as e:
             if verbose > 0:
                 pprint("files pickle not found in path, initializing")
             self.files = []
+
+        # Load configuration from disk into 'config' attribute
         try:
             self.config = load(self.config_path + "/config.pkl")
         except FileNotFoundError as e:
@@ -138,20 +144,41 @@ class Db:
         """Save Db"""
         pgpgram_db = PGPgramDb(self, filetype="any", exclude=[], update=True)
         self.index = Index(pgpgram_db, slb=3, verbose=self.verbose)
-        save(self.index, self.data_path + "/index.pkl")
-        save(self.files, self.config_path + "/files.pkl")
-        save(self.config, self.config_path + "/config.pkl")
+        save(self.index, path_join(self.data_path, "index.pkl"))
+        save(self.files, path_join(self.config_path, "files.pkl"))
+        save(self.config, path_join(self.config_path, "config.pkl"))
 
-    def search(self, query, path=getcwd(), filetype="any", exclude=[], results_number=10, verbose=0):
+    def search(self, query, 
+                     path=getcwd(), 
+                     filetype="any", 
+                     exclude=[], 
+                     results_number=10, 
+                     verbose=0):
+
         if filetype != "any" or path != getcwd():
-            slb = min([len(w) for w in query.split(" ")])
-            pgpgram_db = PGPgramDb(self, path=path, filetype=filetype, exclude=exclude, update=True)
-            self.index = Index(pgpgram_db, slb=slb, verbose=verbose)
+            word_shortest = min([len(w) for w in query.split(" ")])
+            pgpgram_db_kwargs = {'path': path,
+                                 'filetype': filetype,
+                                 'exclude': exclude,
+                                 'update': True}
+            pgpgram_db = PGPgramDb(self, **pgpgram_db_kwargs)
+            self.index = Index(pgpgram_db, slb=word_shortest, verbose=verbose)
+
         results = self.index.search(query)
-        for i,f in enumerate(results[0:results_number]):
+
+        for i,f in enumerate(results[:results_number]):
             g = f.split("/")
-            print(color.GREEN + color.BOLD + str(i) + ". " + color.BLUE + g[-1] + color.END)
-            print(color.GRAY + f + color.END + "\n")
+            title_string = "{}{}. {}{}{}".format(color.GREEN + color.BOLD,
+                                                 i,
+                                                 color.BLUE,
+                                                 g[-1],
+                                                 color.END)
+            subtitle_string = "{}{}{}\n".format(color.GRAY,
+                                                f,
+                                                color.END)
+            print(title_string)
+            print(subtitle_string)
+
         if results != []:
             choice = int(input("Select file to restore (number): "))
             f = [d for d in self.files if d['path'] == results[choice]][-1]["name"]
@@ -351,11 +378,12 @@ class Backup:
 
         """
         if event['@type'] == 'error' and event['message'] == 'Chat not found':
-            print(color.BOLD + color.BLUE +
-                  "\nInstructions: " + color.END +
-                  "send the message 'telegram " +
-                  "will not allow this' in the chat you want your " +
-                  "backups to be stored.")
+            instructions_string = ("{}\n Instructions: {}"
+                                   "send the message 'telegram"
+                                   "will not allow this' in the"
+                                   "chat you want your backups"
+                                   "to be stored.").format(color.BOLD + color.BLUE, color.END)
+            print(instructions_string)
             found = self.find_backup_chat(td, event)
             if found:
                  return True
@@ -396,7 +424,9 @@ class Restore:
 
         try:
             # Check if filename exists
-            results = [f for f in self.db.files if (f["name"] == filename) or (f["path"] == filename)]
+            results = [f for f in self.db.files if (f["name"] == filename) or 
+                                                   (f["path"] == filename) or
+                                                   (f["hash"] == filename)]
             if len(results) > 1:
                 print("Multiple results:")
                 for i,f in enumerate(results):
@@ -532,28 +562,123 @@ OPTIONS:
 """
 
     parser = ArgumentParser(description="PGP encrypted backups on Telegram Cloud")
-    parser.add_argument('--verbose', dest='verbose', action='store_true', default=False, help="extended output")
-    parser.add_argument('--version', dest='version', action='store_true', default=False, help="print version")
+
+    # Parser args
+    verbose = {'args': ['--verbose'],
+               'kwargs': {'dest': 'verbose',
+                          'action': 'store_true',
+                          'default': False,
+                          'help': 'extended output'}}
+
+    version = {'args': ['--version'],
+               'kwargs': {'dest': 'version',
+                          'action': 'store_true',
+                          'default': False,
+                          'help': 'print version'}}
+
+    parser.add_argument(*verbose['args'], **verbose['kwargs'])
+    parser.add_argument(*version['args'], **version['kwargs'])
+
     command = parser.add_subparsers(dest="command")
 
     backup = command.add_parser('backup', help="backup file")
-    backup.add_argument('filename', nargs='+', action='store', help="exact name of the file to back up; default: same name")
-    backup.add_argument('--size', dest='size', nargs=1, action="store", default=[100], help="specify size of the chunks the file will be split; default: 100M")
-    backup.add_argument('--ignore-duplicate', dest='duplicate', action='store_true', default=False, help="backup file even if already present in the database; default: No")
+
+    # Backup args
+
+    backup_filename = {'args': ['filename'],
+                       'kwargs': {'nargs': '+',
+                                  'action': 'store',
+                                  'help': "exact name of the file to back up; default: same name"}}
+
+    size = {'args': ['--size'],
+            'kwargs': {'dest': 'size',
+                       'nargs': 1,
+                       'action': 'store',
+                       'default':[100],
+                       'help': "specify size of the chunks the file will be split; default: 100M"}}
+
+    ignore_duplicate = {'args': ['--ignore-duplicate'],
+                        'kwargs': {'dest': 'duplicate',
+                                   'action': 'store_true',
+                                   'default': False,
+                                   'help': "backup file even if already present in the database; default: No"}}
+
+    backup.add_argument(*backup_filename['args'], **backup_filename['kwargs'])
+    backup.add_argument(*size['args'], **size['kwargs'])
+    backup.add_argument(*ignore_duplicate['args'], **ignore_duplicate['kwargs'])
 
     restore = command.add_parser('restore', help="restore file")
-    restore.add_argument('filename', nargs='+', action='store', help="exact name of the file to be restored")
-    restore.add_argument('--download-directory', dest='download_dir', nargs=1, action="store", default=[getcwd()], help="directory in which to save the file; default: current dir") 
+
+    # Restore args
+
+    restore_filename = {'args': ['filename'],
+                        'kwargs': {'nargs': '+',
+                                   'action': 'store',
+                                   'help': ("exact name, complete path"
+                                            "or hash of the file to be restored")}}
+
+    download_directory = {'args': ['--download-directory'],
+                          'kwargs': {'dest': 'download_dir',
+                                     'nargs': 1,
+                                     'action': 'store',
+                                     'default': [getcwd()],
+                                     'help': "directory in which to save the file; default: current dir"}}
+
+    restore.add_argument(*restore_filename['args'], **restore_filename['kwargs'])
+    restore.add_argument(*download_directory['args'], **download_directory['kwargs']) 
 
     list_command = command.add_parser('list', help="show all backed up files in location")
-    list_command.add_argument('pattern', nargs='?', default='', help="the files start with this pattern")
+
+    # List args
+
+    list_pattern = {'args': ['pattern'],
+                    'kwargs': {'nargs': '?',
+                               'default': '',
+                               'help': "the files start with this pattern"}}
+
+    list_command.add_argument(*list_pattern['args'], **list_pattern['kwargs'])
  
     search = command.add_parser('search', help="search and eventually download a backed up file")
-    search.add_argument('query', nargs='+', action='store', help="what to search")
-    search.add_argument('--path', dest='path', nargs=1, action="store", default=[getcwd()], help="specify the path in which the results were when backed up; default: current dir")
-    search.add_argument('--filetype', dest='filetype', nargs=1, action="store", default=["any"], help="any, images, documents, code, audio, video")
-    search.add_argument('--results', dest='results', action="store", default=10, help="how many results to display; default: 10")
-    search.add_argument('--exclude', dest='exclude', nargs='+', help="exclude from results files with the given extensions", action="store", default=[])
+
+    # Search args
+
+    search_query = {'args': ['query'],
+                    'kwargs': {'nargs': '+',
+                               'action': 'store',
+                               'help': "what to search"}}
+
+    search_path = {'args': ['--path'],
+                   'kwargs': {'dest': 'path',
+                              'nargs': 1,
+                              'action': 'store',
+                              'default': [getcwd()],
+                              'help': "specify the path in which the results were when backed up; default: current dir"}}
+
+    search_filetype = {'args': ['--filetype'],
+                       'kwargs': {'dest': 'filetype',
+                                  'nargs': 1,
+                                  'action': 'store',
+                                  'default': ['any'],
+                                  'help': "any, images, documents, code, audio, video"}}
+
+    search_results = {'args': ['--results'],
+                      'kwargs': {'dest': 'results',
+                                 'action': 'store',
+                                 'default': 10,
+                                 'help': "how many results to display; default: 10"}}
+
+    search_exclude = {'args': ['--exclude'],
+                      'kwargs': {'dest': 'exclude',
+                                 'nargs': '+',
+                                 'action': 'store',
+                                 'default': [],
+                                 'help': "exclude from results files with the given extensions"}}
+
+    search.add_argument(*search_query['args'], **search_query['kwargs'])
+    search.add_argument(*search_path['args'], **search_path['kwargs'])
+    search.add_argument(*search_filetype['args'], **search_filetype['kwargs'])
+    search.add_argument(*search_results['args'], **search_results['kwargs'])
+    search.add_argument(*search_exclude['args'], **search_exclude['kwargs'])
     args = parser.parse_args()
 
     if args.version:
@@ -566,8 +691,18 @@ OPTIONS:
         verbose = 0
 
     if args.command == "backup":
+        backup_kwargs = {'ignore_duplicate': args.duplicate,
+                         'size': str(args.size[0]),
+                         'verbose': verbose}
         for f in args.filename:
-            backup = Backup(f, ignore_duplicate=args.duplicate, size=str(args.size[0]), verbose=verbose)
+            if not isfile(f):
+                if isdir(f):
+                    for path, directory, files in walk(f):
+                        for f2 in files:
+                            file_path = path_join(path, f2)
+                            backup = Backup(file_path, **backup_kwargs)
+            else:
+                backup = Backup(f, **backup_kwargs)
 
     if args.command == "restore":
         for f in args.filename:
