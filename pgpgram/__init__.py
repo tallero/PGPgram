@@ -232,7 +232,7 @@ class Backup:
 
         try:
             current_path = getcwd()
-            f = abspath(f)
+            #f = abspath(f)
             self.verbose = verbose
             self.db = Db(verbose)
             """Database class instance"""
@@ -254,11 +254,11 @@ class Backup:
             # Process document
             self.document = self.process_file(f, ignore_duplicate=ignore_duplicate, verbose=verbose)
             if not self.document:
-                raise MessageInException(f + ': already backed up')
+                raise MessageInException(self.document['path'] + ': already backed up')
  
             # Encrypt document
             encrypted = path_join(self.db.cache_path, '.'.join([self.document["name"], "gpg"]))
-            self.encrypt(f, self.document["passphrase"], output=encrypted)
+            self.encrypt(self.document['path'], self.document["passphrase"], output=encrypted)
 
             # Split document
             if 'format version' in self.document.keys():
@@ -309,13 +309,15 @@ class Backup:
         """
         document = {}
         document["name"] = f.split("/")[-1]
-        document["hash"] = self.hash(f)
-        document["path"] = f
+        document["path"] = abspath(f)
+        document["hash"] = self.hash(abspath(f))
+        document["real path"] = realpath(f)
+        document['actual path'] = f
         document["id"] = random_id(20)
         document["passphrase"] = random_id(200)
         document["chat id"] = self.db.config["backup chat id"]
         document['messages id'] = []
-        document['size'] = getsize(f)
+        document['size'] = getsize(abspath(f))
         document['format version'] = 2
 
         if verbose >= 1:
@@ -748,6 +750,7 @@ def main():
 
     if args.command == "list":
         db = Db()
+        args.pattern
         docs = [d for d in db.files if d['path'].startswith(getcwd() + "/" + args.pattern)]
         if args.verbose:
             pprint(docs)
