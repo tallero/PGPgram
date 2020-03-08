@@ -26,6 +26,7 @@
 import inspect
 import logging
 import string
+from datetime import datetime
 from os.path import abspath, basename, exists, dirname, getsize, isfile, isdir, realpath
 from os.path import join as path_join
 from os import chdir as cd
@@ -232,7 +233,7 @@ class Backup:
 
         try:
             current_path = getcwd()
-            #f = abspath(f)
+            f = abspath(f)
             self.verbose = verbose
             self.db = Db(verbose)
             """Database class instance"""
@@ -251,18 +252,19 @@ class Backup:
                       "backups to be stored.")
                 td.cycle(self.find_backup_chat)
             chat_id = self.db.config['backup chat id']
+ 
             # Process document
             self.document = self.process_file(f, ignore_duplicate=ignore_duplicate, verbose=verbose)
             if not self.document:
-                raise MessageInException(self.document['path'] + ': already backed up')
- 
+                raise MessageInException('{}: already backed up'.format(f))
+
             # Encrypt document
             encrypted = path_join(self.db.cache_path, '.'.join([self.document["name"], "gpg"]))
             self.encrypt(self.document['path'], self.document["passphrase"], output=encrypted)
 
             # Split document
             if 'format version' in self.document.keys():
-                if self.document['format version'] == 2:
+                if self.document['format version'] >= 2:
                     digits = 6
             else:
                 digits = 2
@@ -309,16 +311,17 @@ class Backup:
         """
         document = {}
         document["name"] = f.split("/")[-1]
-        document["path"] = abspath(f)
-        document["hash"] = self.hash(abspath(f))
+        document["path"] = f
+        print(abspath(f))
+        document["hash"] = self.hash(f)
         document["real path"] = realpath(f)
-        document['actual path'] = f
         document["id"] = random_id(20)
         document["passphrase"] = random_id(200)
         document["chat id"] = self.db.config["backup chat id"]
         document['messages id'] = []
-        document['size'] = getsize(abspath(f))
-        document['format version'] = 2
+        document['size'] = getsize(f)
+        document['format version'] = 3
+        document['date backed up'] = datetime.now()
 
         if verbose >= 1:
             for k in document.keys():
@@ -750,8 +753,8 @@ def main():
 
     if args.command == "list":
         db = Db()
-        args.pattern
-        docs = [d for d in db.files if d['path'].startswith(getcwd() + "/" + args.pattern)]
+        path = abspath(args.pattern)
+        docs = [d for d in db.files if d['path'].startswith(path)]
         if args.verbose:
             pprint(docs)
         else:
