@@ -232,6 +232,14 @@ class Td:
                 if self.verbosity_level >= 2:
                     print("Connesso")
                 return "Connected"
+        if event['@type'] == 'updateServiceNotification':
+            print("evento giusto")
+            if event['type'].startswith("AUTH_KEY_DROP_DUPLICATE_"):
+                self.logout()
+                print("codice giusto")
+
+    def logout(self):
+        self.send({"@type":"logOut"})
 
     def find_user(first_name=None):
         """Find user through 'updateUser' events when connection is just estabilished.
@@ -320,7 +328,9 @@ class Td:
                 pass
 
             if event:
-                self.signin(event)
+                res = self.signin(event)
+                if res: print(res)
+
                 if self.connected:
                     if function(self, event):
                         if self.verbosity_level >= 2:

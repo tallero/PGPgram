@@ -598,21 +598,6 @@ class Restore:
 # as script
 
 def main():
-    help_text="""pgpgram
-
-Encrypted backups on telegram.
-
-SYNTAX:
-    pgpgram [command] [option] [argument]
-
-COMMANDS:
-    backup, restore
-
-OPTIONS:
-    -r
-    --recursive: recursively execute [command] on every file in the argument directory
-    --test
-"""
 
     parser = ArgumentParser(description="PGP encrypted backups on Telegram Cloud")
 
