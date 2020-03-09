@@ -176,7 +176,8 @@ class Db:
                      path=getcwd(), 
                      filetype="any", 
                      exclude=[], 
-                     results_number=10, 
+                     results_number=10,
+                     reverse=True,
                      verbose=0):
 
         if filetype != "any" or path != getcwd():
@@ -190,26 +191,32 @@ class Db:
 
         results = self.index.search(query)
 
-        self.display_results(results[:results_number])
+        self.display_results(results[:results_number], reverse=reverse)
 
         if results != []:
             choice = int(input("Select file to restore (number): "))
             f = [d for d in self.files if d['path'] == results[choice]][-1]["name"]
             restore = Restore(f, download_directory=getcwd(), verbose=verbose) 
 
-    def display_results(self, results):
+    def display_results(self, results, reverse=True):
+        lines = []
         for i,f in enumerate(results):
             g = f.split("/")
-            title_string = "{}{}. {}{}{}".format(color.GREEN + color.BOLD,
-                                                 i,
-                                                 color.BLUE,
-                                                 g[-1],
-                                                 color.END)
-            subtitle_string = "{}{}{}\n".format(color.GRAY,
-                                                f,
-                                                color.END)
-            print(title_string)
-            print(subtitle_string)
+            result = {"title": "{}{}. {}{}{}".format(color.GREEN + color.BOLD,
+                                                     i,
+                                                     color.BLUE,
+                                                     g[-1],
+                                                     color.END),
+                      "subtitle": "{}{}{}\n".format(color.GRAY,
+                                                    f,
+                                                    color.END)}
+            lines.append(result)
+
+        if reverse: lines.reverse()
+        
+        for result in lines:
+            print(result['title'])
+            print(result['subtitle'])
 
 
 class Backup:
@@ -238,10 +245,6 @@ class Backup:
             self.db = Db(verbose)
             """Database class instance"""
             cd(self.db.config_path)
-
-            # Instantiates telegram client
-            td = Td(tdjson_path=self.db.executable_path, db_key=self.db.config["db key"], verbosity_level=verbose)
-            td.cycle(self.connected)
 
             # If not already, select backup chat
             if not "backup chat id" in self.db.config.keys():
@@ -274,6 +277,11 @@ class Backup:
                                'size': size,
                                'digits': digits}}
             self.document["pieces"] = self.split(*split['args'], **split['kwargs']) 
+
+            # Instantiates telegram client
+            td = Td(tdjson_path=self.db.executable_path, db_key=self.db.config["db key"], verbosity_level=verbose)
+            td.cycle(self.connected)
+
 
             # Send files
             for i in range(self.document["pieces"]):
@@ -312,7 +320,6 @@ class Backup:
         document = {}
         document["name"] = f.split("/")[-1]
         document["path"] = f
-        print(abspath(f))
         document["hash"] = self.hash(f)
         document["real path"] = realpath(f)
         document["id"] = random_id(20)
@@ -722,6 +729,9 @@ def main():
     search.add_argument(*search_filetype['args'], **search_filetype['kwargs'])
     search.add_argument(*search_results['args'], **search_results['kwargs'])
     search.add_argument(*search_exclude['args'], **search_exclude['kwargs'])
+
+    info = command.add_parser('info', help="identity information")
+
     args = parser.parse_args()
 
     if args.version:
@@ -732,6 +742,16 @@ def main():
         verbose = 2
     else:
         verbose = 0
+
+    if args.command == "info":
+        db = Db()
+
+        files = len(db.files)
+        size = sum(f['size'] for f in db.files)
+        
+        info = "Files backed up: {}\nTotal size: {}".format(files, size)
+
+        print(info)
 
     if args.command == "backup":
         backup_kwargs = {'ignore_duplicate': args.duplicate,

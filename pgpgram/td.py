@@ -329,7 +329,7 @@ class Td:
 
             if event:
                 res = self.signin(event)
-                if res: print(res)
+                if self.verbosity_level >= 2 and res: print(res)
 
                 if self.connected:
                     if function(self, event):
