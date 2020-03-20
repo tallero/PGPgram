@@ -217,7 +217,7 @@ class Db:
             print(result['title'])
             print(result['subtitle'])
 
-    def import(self, filename):
+    def import_file(self, filename):
         files = load(filename)
         for f in files:
             if not f['hash'] in [g['hash'] for g in self.files]:
@@ -744,7 +744,7 @@ def main():
 
     # Import args
     import_filename = {'args': ['filename'],
-                       'kwargs': {'nargs': '+',
+                       'kwargs': {'nargs': 1,
                                   'action': 'store',
                                   'help': "pickle file to import"}}
 
@@ -774,7 +774,7 @@ def main():
 
     if args.command == "import":
         db = Db()
-        db.import()
+        db.import_file(*args.filename)
 
     if args.command == "backup":
         backup_kwargs = {'ignore_duplicate': args.duplicate,
