@@ -79,7 +79,6 @@ def load(path):
     """
     with open(path, 'rb') as f:
         variable = pickle_load(f)
-    f.close()
     return variable
 
 def random_id(N):
@@ -217,6 +216,14 @@ class Db:
         for result in lines:
             print(result['title'])
             print(result['subtitle'])
+
+    def import(self, filename):
+        files = load(filename)
+        for f in files:
+            if not f['hash'] in [g['hash'] for g in self.files]:
+                self.files.append(f)
+                print("adding {}".format(f['name']))
+        self.save()
 
 
 class Backup:
@@ -732,6 +739,17 @@ def main():
 
     info = command.add_parser('info', help="identity information")
 
+    import_command = command.add_parser('import', help=("import pgpgram backup " 
+                                                        "files from another pgpgram installation"))
+
+    # Import args
+    import_filename = {'args': ['filename'],
+                       'kwargs': {'nargs': '+',
+                                  'action': 'store',
+                                  'help': "pickle file to import"}}
+
+    import_command.add_argument(*backup_filename['args'], **backup_filename['kwargs'])
+
     args = parser.parse_args()
 
     if args.version:
@@ -747,11 +765,16 @@ def main():
         db = Db()
 
         files = len(db.files)
-        size = sum(f['size'] for f in db.files)
+        files_with_size = files - len([f for f in db.files if 'size' in f.keys()])
+        size = sum(f['size'] for f in db.files if 'size' in f.keys())/1000000000
         
-        info = "Files backed up: {}\nTotal size: {}".format(files, size)
+        info = "Files backed up: {}\nFiles which have size: {}\nTotal size (GB): {}".format(files, files_with_size, size)
 
         print(info)
+
+    if args.command == "import":
+        db = Db()
+        db.import()
 
     if args.command == "backup":
         backup_kwargs = {'ignore_duplicate': args.duplicate,
