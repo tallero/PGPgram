@@ -93,35 +93,17 @@ class Td:
         self.destroy.restype = None
         self.destroy.argtypes = [c_void_p]
 
-#         self.td_set_log_file_path = tdjson.td_set_log_file_path
-#         self.td_set_log_file_path.restype = c_int
-#         self.td_set_log_file_path.argtypes = [c_char_p]
-#         self.td_set_log_max_file_size = tdjson.td_set_log_max_file_size
-#         self.td_set_log_max_file_size.restype = None
-#         self.td_set_log_max_file_size.argtypes = [c_longlong]
-# 
-#         self.td_set_log_verbosity_level = tdjson.td_set_log_verbosity_level
-#         self.td_set_log_verbosity_level.restype = None
-#         self.td_set_log_verbosity_level.argtypes = [c_int]
-
         self.fatal_error_callback_type = CFUNCTYPE(None, c_char_p)
 
         self.td_set_log_fatal_error_callback = tdjson.td_set_log_fatal_error_callback
         self.td_set_log_fatal_error_callback.restype = None
         self.td_set_log_fatal_error_callback.argtypes = [self.fatal_error_callback_type]
 
-#        self.td_set_log_verbosity_level(self.verbosity_level)
         self.c_on_fatal_error_callback = self.fatal_error_callback_type(self.on_fatal_error_callback)
         self.td_set_log_fatal_error_callback(self.c_on_fatal_error_callback)
 
-#        self.td_set_log_verbosity_level(self.verbosity_level)
         self.c_on_fatal_error_callback = self.fatal_error_callback_type(self.on_fatal_error_callback)
         self.td_set_log_fatal_error_callback(self.c_on_fatal_error_callback)
-
-        # setting TDLib log verbosity level to 1 (errors)
-        print(self.execute({'@type': 'setLogVerbosityLevel', 
-                            'new_verbosity_level': verbosity_level, 
-                            '@extra': 1.01234}))
 
         self.tdlib_parameters = {'@type':"setTdlibParameters", "parameters":{
                                                                "database_directory":"tdlib",
@@ -135,6 +117,13 @@ class Td:
                                                                "application_version":"1.0",
                                                                "enable_storage_optimizer":True}}
         self.client = self.td_json_client_create()
+
+        # setting TDLib log verbosity level to 1 (errors)
+        print(self.execute({'@type': 'setLogVerbosityLevel', 
+                            'new_verbosity_level': verbosity_level, 
+                            '@extra': 1.01234}))
+
+
 
     def on_fatal_error_callback(self, error_message):
         """Fatal error handling"""
