@@ -3,7 +3,7 @@
 #    Td
 #
 #    ----------------------------------------------------------------------
-#    Copyright © 2018, 2019  Pellegrino Prevete
+#    Copyright © 2018, 2019, 2020  Pellegrino Prevete
 #
 #    All rights reserved
 #    ----------------------------------------------------------------------
@@ -93,16 +93,16 @@ class Td:
         self.destroy.restype = None
         self.destroy.argtypes = [c_void_p]
 
-        self.td_set_log_file_path = tdjson.td_set_log_file_path
-        self.td_set_log_file_path.restype = c_int
-        self.td_set_log_file_path.argtypes = [c_char_p]
-        self.td_set_log_max_file_size = tdjson.td_set_log_max_file_size
-        self.td_set_log_max_file_size.restype = None
-        self.td_set_log_max_file_size.argtypes = [c_longlong]
-
-        self.td_set_log_verbosity_level = tdjson.td_set_log_verbosity_level
-        self.td_set_log_verbosity_level.restype = None
-        self.td_set_log_verbosity_level.argtypes = [c_int]
+#         self.td_set_log_file_path = tdjson.td_set_log_file_path
+#         self.td_set_log_file_path.restype = c_int
+#         self.td_set_log_file_path.argtypes = [c_char_p]
+#         self.td_set_log_max_file_size = tdjson.td_set_log_max_file_size
+#         self.td_set_log_max_file_size.restype = None
+#         self.td_set_log_max_file_size.argtypes = [c_longlong]
+# 
+#         self.td_set_log_verbosity_level = tdjson.td_set_log_verbosity_level
+#         self.td_set_log_verbosity_level.restype = None
+#         self.td_set_log_verbosity_level.argtypes = [c_int]
 
         self.fatal_error_callback_type = CFUNCTYPE(None, c_char_p)
 
@@ -110,13 +110,18 @@ class Td:
         self.td_set_log_fatal_error_callback.restype = None
         self.td_set_log_fatal_error_callback.argtypes = [self.fatal_error_callback_type]
 
-        self.td_set_log_verbosity_level(self.verbosity_level)
+#        self.td_set_log_verbosity_level(self.verbosity_level)
         self.c_on_fatal_error_callback = self.fatal_error_callback_type(self.on_fatal_error_callback)
         self.td_set_log_fatal_error_callback(self.c_on_fatal_error_callback)
 
-        self.td_set_log_verbosity_level(self.verbosity_level)
+#        self.td_set_log_verbosity_level(self.verbosity_level)
         self.c_on_fatal_error_callback = self.fatal_error_callback_type(self.on_fatal_error_callback)
         self.td_set_log_fatal_error_callback(self.c_on_fatal_error_callback)
+
+        # setting TDLib log verbosity level to 1 (errors)
+        print(self.execute({'@type': 'setLogVerbosityLevel', 
+                            'new_verbosity_level': verbosity_level, 
+                            '@extra': 1.01234}))
 
         self.tdlib_parameters = {'@type':"setTdlibParameters", "parameters":{
                                                                "database_directory":"tdlib",
@@ -208,21 +213,27 @@ class Td:
 
             # select phone number for login
             if auth_state['@type'] == "authorizationStateWaitPhoneNumber":
-                phone_number = input(color.BOLD + color.BLUE + "Please insert your phone number: " + color.END)
+                phone_number = input(color.BOLD + color.BLUE + "Please enter your phone number: " + color.END)
                 self.send({"@type":"setAuthenticationPhoneNumber", "phone_number":phone_number})
                 self.connected = False           
                 return "Sended Phone Number"
  
-            # insert authentication code
+            # enter authentication code
             if auth_state['@type'] == 'authorizationStateWaitCode':
-                code = input(color.BOLD + color.RED + "Please insert the authentication code you received: " + color.END)
+                code = input(color.BOLD + color.RED + "Please enter the authentication code you received: " + color.END)
                 self.send({"@type":"checkAuthenticationCode", "code":code})
                 self.connected = False
                 return "Sent authentication code"
 
-            # insert authentication password if present
+            # wait for first and last name for new users
+            if auth_state['@type'] == 'authorizationStateWaitRegistration':
+                first_name = input('Please enter your first name: ')
+                last_name = input('Please enter your last name: ')
+                td_send({'@type': 'registerUser', 'first_name': first_name, 'last_name': last_name})
+
+            # enter authentication password if present
             if auth_state['@type'] == "authorizationStateWaitPassword":
-                password = getpass(color.BOLD + color.RED + "Please insert your password: " + color.END)
+                password = getpass(color.BOLD + color.RED + "Please enter your password: " + color.END)
                 self.send({"@type":"checkAuthenticationPassword", "password":password})
                 self.connected = False
                 return "Sent authentication password"

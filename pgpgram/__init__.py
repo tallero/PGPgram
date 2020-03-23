@@ -27,6 +27,7 @@ import inspect
 import logging
 import string
 from datetime import datetime
+from getpass import getpass
 from os.path import abspath, basename, exists, dirname, getsize, isfile, isdir, realpath
 from os.path import join as path_join
 from os import chdir as cd
@@ -51,7 +52,7 @@ from .td import Td
 from .color import Color
 
 name = "pgpgram"
-version = "0.1.6"
+version = "0.2"
 
 setproctitle(name)
 
@@ -614,6 +615,67 @@ class Restore:
                 self.download_paths.append(event['local']['path'])
                 return True
 
+def youtube_backup(url, verbose):
+    try:
+        from youtube_dl import YoutubeDL as youtube_dl
+    except ModuleNotFoundError as e:
+        print("Please install youtube-dl")
+
+    db = Db(verbose)
+
+    # Youtube-dl direct sign-in feature currently not working
+    #
+    # if not "youtube" in db.config.keys():
+    #     credentials = {"username": input("Insert your YouTube username: "),
+    #                    "password": getpass("Please insert your YouTube password: ")}
+    #     save = input(("Do you want PGPgram to remember them? "
+    #                   "(stored unencrypted): [y/N]"))
+    #     if save.lower() == "y":
+    #         db.config['youtube'] = credentials
+    #         db.save()
+    # else:
+    #     credentials = db.config['youtube']
+    # ydl = youtube_dl(credentials)
+
+    args = {"ignoreerrors":True}
+
+    cookiefile = path_join(db.config_path, "cookies.txt")
+    if not exists(cookiefile):
+        print(("WARNING: cookies.txt not present in ~/.config/pgpgram"
+               "See https://github.com/ytdl-org/youtube-dl#how-do-i-pass-cookies-to-youtube-dl"))
+    else:
+        args["cookiefile"] = cookiefile
+
+    def video_url_backup(url):
+        try:
+            info = ydl.extract_info(url, download=True)
+        except Exception as e:
+            print(type(e))
+            print(e)
+        starts_arg = "{}-{}".format(info['title'], info['id'])
+        info_file = "".join([starts_arg, ".pkl"])
+        outfile = [f for f in ls() if f.startswith(starts_arg)][-1]
+        Backup(outfile)
+        save(info, info_file)
+        Backup(info_file)
+        rm(outfile)
+        rm(info_file)
+
+    is_present = lambda x: any(x in name for name in (f['name'] for f in db.files))
+
+    ydl = youtube_dl(args)
+    info = ydl.extract_info(url, download=False)
+    if 'entries' in info.keys() and info['_type'] == 'playlist':
+        for e in info['entries']:
+            if not is_present(e['id']):
+                video_url_backup(e['webpage_url'])
+    else:
+        if not is_present(info['id']):
+            video_url_backup(info['webpage_url'])
+        else:
+            print("Video already backed up")
+
+
 # as script
 
 def main():
@@ -658,11 +720,19 @@ def main():
                         'kwargs': {'dest': 'duplicate',
                                    'action': 'store_true',
                                    'default': False,
-                                   'help': "backup file even if already present in the database; default: No"}}
+                                   'help': "backup file even if already present in the database; default: False"}}
+
+    youtube = {'args': ['--youtube'],
+               'kwargs': {'dest': 'youtube',
+                          'action': 'store_true',
+                          'default': False,
+                          'help': ("use if you want to backup a youtube video or channel"
+                                   "(requires youtube-dl); default: False")}}
 
     backup.add_argument(*backup_filename['args'], **backup_filename['kwargs'])
     backup.add_argument(*size['args'], **size['kwargs'])
     backup.add_argument(*ignore_duplicate['args'], **ignore_duplicate['kwargs'])
+    backup.add_argument(*youtube['args'], **youtube['kwargs'])
 
     restore = command.add_parser('restore', help="restore file")
 
@@ -762,7 +832,7 @@ def main():
         verbose = 0
 
     if args.command == "info":
-        db = Db()
+        db = Db(verbose)
 
         files = len(db.files)
         files_with_size = files - len([f for f in db.files if 'size' in f.keys()])
@@ -773,29 +843,34 @@ def main():
         print(info)
 
     if args.command == "import":
-        db = Db()
+        db = Db(verbose)
         db.import_file(*args.filename)
 
     if args.command == "backup":
         backup_kwargs = {'ignore_duplicate': args.duplicate,
                          'size': str(args.size[0]),
                          'verbose': verbose}
-        for f in args.filename:
-            if not isfile(f):
-                if isdir(f):
-                    for path, directory, files in walk(f):
-                        for f2 in files:
-                            file_path = path_join(path, f2)
-                            backup = Backup(file_path, **backup_kwargs)
-            else:
-                backup = Backup(f, **backup_kwargs)
+        if not args.youtube:
+            for f in args.filename:
+                if not isfile(f):
+                    if isdir(f):
+                        for path, directory, files in walk(f):
+                            for f2 in files:
+                                file_path = path_join(path, f2)
+                                backup = Backup(file_path, **backup_kwargs)
+                else:
+                    backup = Backup(f, **backup_kwargs)
+
+        if args.youtube:
+            print("downloading youtube video/channel")
+            youtube_backup(*args.filename, verbose)
 
     if args.command == "restore":
         for f in args.filename:
             restore = Restore(f, download_directory=args.download_dir[0], verbose=verbose)
 
     if args.command == "list":
-        db = Db()
+        db = Db(verbose)
         path = abspath(args.pattern)
         docs = [d for d in db.files if d['path'].startswith(path)]
         if args.verbose:
@@ -810,5 +885,5 @@ def main():
         query = args.query[0]
         for w in args.query[1:]:
             query = query + " " + w
-        db = Db()
+        db = Db(verbose)
         search = db.search(query, filetype=args.filetype[0], path=args.path[0], results_number=int(args.results), verbose=verbose)
