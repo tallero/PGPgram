@@ -656,7 +656,7 @@ def youtube_backup(url, verbose):
             print(e)
 
         prefix = ".".join(ydl.prepare_filename(info).split(".")[:-1])
-        info_filename = ".".join([starts_arg, "pkl"])
+        info_filename = ".".join([prefix, "pkl"])
         filename = next(f for f in ls() if f.startswith(prefix))
 
         Backup(filename, verbose=verbose)
