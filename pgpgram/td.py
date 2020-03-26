@@ -67,7 +67,7 @@ class Td:
 
     Args:
         verbosity_level (int): parameter of tdlib json interface."""
-    def __init__(self, tdjson_path, db_key, verbosity_level=2):
+    def __init__(self, tdjson_path, db_key, verbosity_level=0):
         self.db_key = db_key
         self.verbosity_level = verbosity_level
         self.connected = False
@@ -119,9 +119,9 @@ class Td:
         self.client = self.td_json_client_create()
 
         # setting TDLib log verbosity level to 1 (errors)
-        print(self.execute({'@type': 'setLogVerbosityLevel', 
-                            'new_verbosity_level': verbosity_level, 
-                            '@extra': 1.01234}))
+        self.execute({'@type': 'setLogVerbosityLevel', 
+                      'new_verbosity_level': verbosity_level, 
+                      '@extra': 1.01234})
 
 
 

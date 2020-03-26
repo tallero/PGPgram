@@ -52,7 +52,7 @@ from .td import Td
 from .color import Color
 
 name = "pgpgram"
-version = "0.2"
+version = "0.2.1"
 
 setproctitle(name)
 
@@ -195,7 +195,7 @@ class Db:
 
         if results != []:
             choice = int(input("Select file to restore (number): "))
-            f = [d for d in self.files if d['path'] == results[choice]][-1]["name"]
+            f = next(d for d in self.files if d['path'] == results[choice])["name"]
             restore = Restore(f, download_directory=getcwd(), verbose=verbose) 
 
     def display_results(self, results, reverse=True):
@@ -244,7 +244,7 @@ class Backup:
             * 3 to 5 are specific to tdjson.
     """
 
-    def __init__(self, f, ignore_duplicate=False, size='100', verbose=2):
+    def __init__(self, f, ignore_duplicate=False, size='100', verbose=0):
 
         try:
             current_path = getcwd()
@@ -256,11 +256,10 @@ class Backup:
 
             # If not already, select backup chat
             if not "backup chat id" in self.db.config.keys():
-                print(color.BOLD + color.BLUE +
-                      "\nInstructions: " + color.END +
-                      "send the message 'telegram " +
-                      "will not allow this' in the chat you want your " +
-                      "backups to be stored.")
+                print(color.set(color.BLUE, "\nInstructions: ") +
+                      ("send the message 'telegram "
+                       "will not allow this' in the chat you want your "
+                       "backups to be stored."))
                 td.cycle(self.find_backup_chat)
             chat_id = self.db.config['backup chat id']
  
@@ -340,7 +339,7 @@ class Backup:
 
         if verbose >= 1:
             for k in document.keys():
-                print(color.BOLD + color.BLUE + k + ": " + color.END + str(document[k]))
+                print(color.set(color.BLUE, k + ": ") + str(document[k]))
 
         if not ignore_duplicate:
             if document["hash"] in (doc["hash"] for doc in self.db.files):
@@ -646,32 +645,38 @@ def youtube_backup(url, verbose):
     else:
         args["cookiefile"] = cookiefile
 
-    def video_url_backup(url):
+    ydl = youtube_dl(args)
+
+    def video_url_backup(ydl, url):
+
         try:
             info = ydl.extract_info(url, download=True)
         except Exception as e:
             print(type(e))
             print(e)
-        starts_arg = "{}-{}".format(info['title'], info['id'])
-        info_file = "".join([starts_arg, ".pkl"])
-        outfile = [f for f in ls() if f.startswith(starts_arg)][-1]
-        Backup(outfile)
-        save(info, info_file)
-        Backup(info_file)
-        rm(outfile)
-        rm(info_file)
+
+        prefix = ".".join(ydl.prepare_filename(info).split(".")[:-1])
+        info_filename = ".".join([starts_arg, "pkl"])
+        filename = next(f for f in ls() if f.startswith(prefix))
+
+        Backup(filename, verbose=verbose)
+
+        save(info, info_filename)
+        Backup(info_filename, verbose=verbose)
+
+        rm(filename)
+        rm(info_filename)
 
     is_present = lambda x: any(x in name for name in (f['name'] for f in db.files))
 
-    ydl = youtube_dl(args)
     info = ydl.extract_info(url, download=False)
     if 'entries' in info.keys() and info['_type'] == 'playlist':
         for e in info['entries']:
-            if not is_present(e['id']):
-                video_url_backup(e['webpage_url'])
+            if e and not is_present(e['id']):
+                video_url_backup(ydl, e['webpage_url'])
     else:
         if not is_present(info['id']):
-            video_url_backup(info['webpage_url'])
+            video_url_backup(ydl, info['webpage_url'])
         else:
             print("Video already backed up")
 
@@ -862,7 +867,6 @@ def main():
                     backup = Backup(f, **backup_kwargs)
 
         if args.youtube:
-            print("downloading youtube video/channel")
             youtube_backup(*args.filename, verbose)
 
     if args.command == "restore":

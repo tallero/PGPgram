@@ -30,3 +30,6 @@ class Color:
     GREEN = '\033[92m'
     GRAY = '\033[97m'
     END = '\033[0m'
+
+    def set(self, color, text):
+        return "{}{}{}{}".format(self.BOLD, color, text, self.END)
