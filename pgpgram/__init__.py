@@ -451,14 +451,14 @@ class Backup:
         """
         if event['@type'] == 'error' and event['message'] == 'Chat not found':
             instructions_string = ("{}\n Instructions: {}"
-                                   "send the message 'telegram"
-                                   "will not allow this' in the"
+                                   "send the message 'telegram "
+                                   "will not allow this' in the "
                                    "chat you want your backups"
                                    "to be stored.").format(color.BOLD + color.BLUE, color.END)
             print(instructions_string)
             found = self.find_backup_chat(td, event)
-            if found:
-                 return True
+            #if found:
+            #     return True
             
         if event['@type'] == 'updateMessageSendSucceeded':
             if self.verbose >= 1:
@@ -814,6 +814,15 @@ def main():
 
     info = command.add_parser('info', help="identity information")
 
+    # Info args
+    info_filename = {'args': ['filename'],
+                     'kwargs': {'nargs': '?',
+                                'action': 'store',
+                                'default': '',
+                                'help': "pickle file to import"}}
+
+    info.add_argument(*info_filename['args'], **info_filename['kwargs'])
+
     import_command = command.add_parser('import', help=("import pgpgram backup " 
                                                         "files from another pgpgram installation"))
 
@@ -839,13 +848,22 @@ def main():
     if args.command == "info":
         db = Db(verbose)
 
-        files = len(db.files)
-        files_with_size = files - len([f for f in db.files if 'size' in f.keys()])
-        size = sum(f['size'] for f in db.files if 'size' in f.keys())/1000000000
-        
-        info = "Files backed up: {}\nFiles which have size: {}\nTotal size (GB): {}".format(files, files_with_size, size)
+        if args.filename:
 
-        print(info)
+            for f in db.files:
+                if args.filename == f['name'] or args.filename == f['hash']:
+                    pprint(f)
+
+        else:
+
+            files = len(db.files)
+            files_with_size = files - len([f for f in db.files if 'size' in f.keys()])
+            size = sum(f['size'] for f in db.files if 'size' in f.keys())/1000000000
+            
+            info = "Files backed up: {}\nFiles which have size: {}\nTotal size (GB): {}".format(files, files_with_size, size)
+
+            print(info)
+
 
     if args.command == "import":
         db = Db(verbose)
