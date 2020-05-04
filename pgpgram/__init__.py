@@ -40,6 +40,7 @@ from pickle import load as pickle_load
 from pprint import pprint
 from random import SystemRandom as random
 from setproctitle import setproctitle
+from sqlitedict import SqliteDict
 from subprocess import Popen, PIPE
 from subprocess import check_output as sh
 from subprocess import getoutput
@@ -114,12 +115,31 @@ class Db:
         self.verbose = verbose
 
         # Load files list from disk into 'files' attribute
-        try:
-            self.files = load(path_join(self.config_path, "files.pkl"))
-        except FileNotFoundError as e:
-            if verbose > 0:
-                pprint("files pickle not found in path, initializing")
-            self.files = []
+        files_db_path = path_join(self.config_path, "files.db")
+
+        if exists(files_db_path):
+            self.files = SqliteDict(files_db_path, autocommit=False)
+        else:
+            self.files = SqliteDict(files_db_path, autocommit=False)
+            files_pickle_path = path_join(self.config_path, "files.pkl")
+            if exists(files_pickle_path):
+                if verbose:
+                    print("converting files pickle to proper db")
+                pickle_files = load(files_pickle_path)
+                for f in pickle_files:
+                    self.files[f['hash']] = [f]
+       
+        # try:
+        #     self.files = load(path_join(self.config_path, "files.db"))
+        #     #self.files = load(path_join(self.config_path, "files.pkl"))
+        # except FileNotFoundError as e:
+
+        #     if exists(path_join(self.config_path, "files.pkl")):
+        #         if verbose:
+        #             print("converting files pickle to proper db")
+        #     if verbose > 0:
+        #         pprint("files pickle not found in path, initializing")
+        #     self.files = []
 
         # Load configuration from disk into 'config' attribute
         try:
@@ -149,12 +169,13 @@ class Db:
                 symlink(tdlib_dir, tdlib_config_symlink)
                 symlink(tdlib_documents_dir, tdlib_documents_symlink)
 
+
         # Load index
-        try:
-            self.index = load(path_join(self.data_path, "index.pkl"))
-        except:
-            if verbose > 0:
-                 print("index still not built")
+        # try:
+        #     self.index = load(path_join(self.data_path, "index.pkl"))
+        # except:
+        #     if verbose > 0:
+        #          print("index still not built")
         self.save()
 
     def save(self):
@@ -166,10 +187,10 @@ class Db:
             - files list
             - configuration
         """
-        pgpgram_db = PGPgramDb(self, filetype="any", exclude=[], update=True)
-        self.index = Index(pgpgram_db, slb=3, verbose=self.verbose)
-        save(self.index, path_join(self.data_path, "index.pkl"))
-        save(self.files, path_join(self.config_path, "files.pkl"))
+        #pgpgram_db = PGPgramDb(self, filetype="any", exclude=[], update=True)
+        #self.index = Index(pgpgram_db, slb=3, verbose=self.verbose)
+        #save(self.index, path_join(self.data_path, "index.pkl"))
+        self.files.commit()
         save(self.config, path_join(self.config_path, "config.pkl"))
 
     def search(self, query, 
@@ -186,17 +207,19 @@ class Db:
                                  'filetype': filetype,
                                  'exclude': exclude,
                                  'update': True}
-            pgpgram_db = PGPgramDb(self, **pgpgram_db_kwargs)
-            self.index = Index(pgpgram_db, slb=word_shortest, verbose=verbose)
 
-        results = self.index.search(query)
+        # To update for db usage
+            #pgpgram_db = PGPgramDb(self, **pgpgram_db_kwargs)
+            #self.index = Index(pgpgram_db, slb=word_shortest, verbose=verbose)
 
-        self.display_results(results[:results_number], reverse=reverse)
+        #results = self.index.search(query)
 
-        if results != []:
-            choice = int(input("Select file to restore (number): "))
-            f = next(d for d in self.files if d['path'] == results[choice])["name"]
-            restore = Restore(f, download_directory=getcwd(), verbose=verbose) 
+        #self.display_results(results[:results_number], reverse=reverse)
+
+        # if results != []:
+        #     choice = int(input("Select file to restore (number): "))
+        #     f = next(self.files[d][0] for d in self.files if self.files[d][0]['path'] == results[choice])["name"]
+        #     restore = Restore(f, download_directory=getcwd(), verbose=verbose) 
 
     def display_results(self, results, reverse=True):
         lines = []
@@ -221,8 +244,10 @@ class Db:
     def import_file(self, filename):
         files = load(filename)
         for f in files:
-            if not f['hash'] in [g['hash'] for g in self.files]:
-                self.files.append(f)
+            try: 
+                self.files[f['hash']]
+            except KeyError as e:
+                self.files[f['hash']] = [f]
                 print("adding {}".format(f['name']))
         self.save()
 
@@ -303,7 +328,11 @@ class Backup:
                 rm(chunk_prefix + str(i).zfill(digits))
                
             # Saving 
-            self.db.files.append(self.document)
+            # See https://github.com/RaRe-Technologies/sqlitedict/issues/110
+            db_hash_document = self.db.files[self.document['hash']]
+            db_hash_document.append(self.document)
+            self.db.files[self.document['hash']] = db_hash_document
+
             self.db.save()
     
             # Close client
@@ -324,26 +353,30 @@ class Backup:
         Returns:
             document (dict):
         """
-        document = {}
-        document["name"] = f.split("/")[-1]
-        document["path"] = f
-        document["hash"] = self.hash(f)
-        document["real path"] = realpath(f)
-        document["id"] = random_id(20)
-        document["passphrase"] = random_id(200)
-        document["chat id"] = self.db.config["backup chat id"]
-        document['messages id'] = []
-        document['size'] = getsize(f)
-        document['format version'] = 3
-        document['date backed up'] = datetime.now()
+        document = {'name': f.split("/")[-1],
+                    'path': f,
+                    'hash': self.hash(f),
+                    'real path': realpath(f),
+                    'id': random_id(20),
+                    'passphrase': random_id(200),
+                    'chat id': self.db.config['backup chat id'],
+                    'messages id': [],
+                    'size': getsize(f),
+                    'format version': 3,
+                    'date backed up': datetime.now()}
 
         if verbose >= 1:
             for k in document.keys():
                 print(color.set(color.BLUE, k + ": ") + str(document[k]))
 
         if not ignore_duplicate:
-            if document["hash"] in (doc["hash"] for doc in self.db.files):
-                return False
+            try:
+                if not self.db.files[document['hash']]:
+                    return document
+                else:
+                    return False
+            except KeyError as e:
+                self.db.files[document['hash']] = []
         return document
 
     def hash(self, f):
@@ -496,9 +529,12 @@ class Restore:
 
         try:
             # Check if filename exists
-            results = [f for f in self.db.files if (f["name"] == filename) or 
-                                                   (f["path"] == filename) or
-                                                   (f["hash"] == filename)]
+            results = [d for k in self.db.files for d in self.db.files[k] if (d['name'] == filename) or
+                                                                             (d['path'] == filename)]
+
+            if filename in self.db.files:
+                results = results + self.db.files[filename]
+
             if len(results) > 1:
                 print("Multiple results:")
                 for i,f in enumerate(results):
@@ -667,7 +703,7 @@ def youtube_backup(url, verbose):
         rm(filename)
         rm(info_filename)
 
-    is_present = lambda x: any(x in name for name in (f['name'] for f in db.files))
+    is_present = lambda x: any(x in name for name in (f['name'] for k in db.files for f in db.files[k]))
 
     info = ydl.extract_info(url, download=False)
     if 'entries' in info.keys() and info['_type'] == 'playlist':
@@ -850,15 +886,16 @@ def main():
 
         if args.filename:
 
-            for f in db.files:
-                if args.filename == f['name'] or args.filename == f['hash']:
-                    pprint(f)
+            for k in db.files:
+                for f in db.files[k]:
+                    if args.filename == f['name'] or args.filename == f['hash']:
+                        pprint(f)
 
         else:
 
             files = len(db.files)
-            files_with_size = files - len([f for f in db.files if 'size' in f.keys()])
-            size = sum(f['size'] for f in db.files if 'size' in f.keys())/1000000000
+            files_with_size = files - len([k for k in db.files if any('size' in f for f in db.files[k])])
+            size = sum(f['size'] for k in db.files for f in db.files[k] if 'size' in f)/1000000000
             
             info = "Files backed up: {}\nFiles which have size: {}\nTotal size (GB): {}".format(files, files_with_size, size)
 
@@ -894,7 +931,7 @@ def main():
     if args.command == "list":
         db = Db(verbose)
         path = abspath(args.pattern)
-        docs = [d for d in db.files if d['path'].startswith(path)]
+        docs = [d for k in db.files for d in db.files[k] if d['path'].startswith(path)]
         if args.verbose:
             pprint(docs)
         else:

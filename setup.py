@@ -20,9 +20,10 @@ setup(
         'console_scripts': ['pgpgram = pgpgram:main']
     },
     install_requires = [
-    'setproctitle',
-    'trovotutto',
     'pyxdg',
+    'setproctitle',
+    'sqlitedict',
+    'trovotutto',
     ],
     classifiers = [
         "Programming Language :: Python :: 3",
