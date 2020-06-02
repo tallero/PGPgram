@@ -5,7 +5,9 @@
 
 ![PGPgram example usage](https://raw.githubusercontent.com/tallero/PGPgram/master/screenshots/pgpgram-in-action.gif)
 
-*PGPgram* is a [GPG](https://gnupg.org) encrypted backup/restore tool written in `python` using [TDLib](https://github.com/tdlib/td). It locally encrypts your files with GnuPG, before they get sent to telegram cloud. Since version 0.2 it also backups youtube videos, playlist and whole channels.
+*PGPgram* is a [GPG](https://gnupg.org) encrypted backup/restore tool written in `python` using [TDLib](https://github.com/tdlib/td). It locally encrypts your files with GnuPG, before they get sent to telegram cloud. 
+
+Since version 0.2 it also backups youtube videos, playlist and whole channels.
 
 ## Motivation
 
@@ -13,7 +15,7 @@ I've come to hate telegram. At the beginning, they were like "we're gonna open s
 
 - they've [never](https://twitter.com/ch3ckmat3/status/517144635466989568) [released](https://twitter.com/RebRied/status/555398577351315456) [the source](https://twitter.com/moxie/status/582276833082650625) [of the server](https://twitter.com/AlexeyMetz/status/583122792654213120) (over 5 years have passed),
 
-- they didn't improve secret chats algorithm so that it could be the default way of sending messages without lacking features (going instead with a *curious*, to say the least [apology](https://telegra.ph/Why-Isnt-Telegram-End-to-End-Encrypted-by-Default-08-14) of unecrypted [remote storage](https://xkcd.com/908/), despite aknowledging the existence of credential recovery [schemes](https://postmarkapp.com/guides/password-reset-email-best-practices) secure at least as their [authentication](https://www.theverge.com/2017/9/18/16328172/sms-two-factor-authentication-hack-password-bitcoin);
+- they didn't improve secret chats algorithm so that it could be the default way of sending messages without lacking features (going instead with a *curious*, to say the least) [apology](https://telegra.ph/Why-Isnt-Telegram-End-to-End-Encrypted-by-Default-08-14) of unecrypted [remote storage](https://xkcd.com/908/), despite aknowledging the existence of credential recovery [schemes](https://postmarkapp.com/guides/password-reset-email-best-practices) secure at least as their [authentication](https://www.theverge.com/2017/9/18/16328172/sms-two-factor-authentication-hack-password-bitcoin);
 
 - they didn't ported secret chats to [desktop](https://github.com/telegramdesktop/tdesktop/issues?utf8=%E2%9C%93&q=is%3Aissue+secret+chat+);
 
