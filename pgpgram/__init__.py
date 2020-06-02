@@ -795,7 +795,7 @@ def youtube_backup(url, verbose):
 
 
 def get_info(file=None):
-    db = Db(verbose)
+    db = Db()
 
     if file:
         try:
@@ -989,8 +989,6 @@ def main():
         verbose = 0
 
     if args.command == "info":
-        db = Db(verbose)
-
         if args.filename:
             get_info(args.filename)
         else:
