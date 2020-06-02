@@ -5,7 +5,7 @@
 
 ![PGPgram example usage](https://raw.githubusercontent.com/tallero/PGPgram/master/screenshots/pgpgram-in-action.gif)
 
-*PGPgram* is a [GPG](https://gnupg.org) encrypted backup/restore tool written in `python` using [TDLib](https://github.com/tdlib/td). It locally encrypts your files with GnuPG, before they get sent to telegram cloud.
+*PGPgram* is a [GPG](https://gnupg.org) encrypted backup/restore tool written in `python` using [TDLib](https://github.com/tdlib/td). It locally encrypts your files with GnuPG, before they get sent to telegram cloud. Since version 0.2 it also backups youtube videos, playlist and whole channels.
 
 ## Motivation
 
@@ -46,13 +46,16 @@ After setting up pip, you can install *PGPgram* by simply typing in your termina
 
 ## Usage
 
-*PGPgram* install a command line utility with the same name, `pgpgram`, that can be used to `backup`, `restore`, `search` and `list` files. You can invoke command line help with `pgpgram --help` and get command options with
+*PGPgram* install a command line utility with the same name, `pgpgram`, that can be used to `backup`, `restore`, and `list` files. You can invoke command line help with `pgpgram --help` and get command options with
 
     pgpgram <command> --help
 
 ![PGPgram search](https://raw.githubusercontent.com/tallero/PGPgram/master/screenshots/pgpgram-search.gif)
 
 The application requires `split`, `cat`, `dd`, `sha256sum` and `gpg` to be present on your system, so maybe macOS users will need to make some aliases. At the moment file deletion is not handled because I reached time limit for unpaid development.
+
+### Backing up the backup
+To backup your encrypted file list just put a copy of `files.db` (located in `~/.config/pgpgram`) somewhere safe. If you need to import files from an existing PGPgram installation to another, you can use the `import` command over `files.db`. 
 
 ## About
 

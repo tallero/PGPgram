@@ -26,8 +26,9 @@
 import inspect
 import logging
 import string
-from concurrent.futures import ProcessPoolExecutor as ppe
-from concurrent.futures import wait
+# from concurrent.futures import ProcessPoolExecutor as ppe
+# from concurrent.futures import wait
+from copy import deepcopy as cp
 from datetime import datetime
 from getpass import getpass
 from os.path import abspath, basename, exists, dirname, getsize, isfile, isdir, realpath
@@ -55,7 +56,7 @@ from .td import Td
 from .color import Color
 
 name = "pgpgram"
-version = "0.2.1"
+version = "0.3"
 
 setproctitle(name)
 
@@ -112,37 +113,23 @@ class Db:
     data_path = BaseDirectory.save_data_path(name)
     cache_path = BaseDirectory.save_cache_path(name)
     executable_path = dirname(realpath(__file__))
+    files_db_path = path_join(BaseDirectory.save_config_path(name), "files.db")
+    names_db_path = path_join(BaseDirectory.save_config_path(name), "names.db")
 
     def __init__(self, verbose=0):
         self.verbose = verbose
 
-        # Load files list from disk into 'files' attribute
-        files_db_path = path_join(self.config_path, "files.db")
-
-        if exists(files_db_path):
-            self.files = SqliteDict(files_db_path, autocommit=False)
+        if exists(self.files_db_path):
+            self.files = SqliteDict(self.files_db_path, autocommit=False)
         else:
-            self.files = SqliteDict(files_db_path, autocommit=False)
-            files_pickle_path = path_join(self.config_path, "files.pkl")
-            if exists(files_pickle_path):
-                if verbose:
-                    print("converting files pickle to proper db")
-                pickle_files = load(files_pickle_path)
-                for f in pickle_files:
-                    self.files[f['hash']] = [f]
+            self.files = SqliteDict(self.files_db_path, autocommit=False)
+            self.from_pickle_to_db()
+                    
+        if exists(self.names_db_path):
+            self.file_names = SqliteDict(self.names_db_path, autocommit=False)
+        else:
+            self.rebuild_names_db()
        
-        # try:
-        #     self.files = load(path_join(self.config_path, "files.db"))
-        #     #self.files = load(path_join(self.config_path, "files.pkl"))
-        # except FileNotFoundError as e:
-
-        #     if exists(path_join(self.config_path, "files.pkl")):
-        #         if verbose:
-        #             print("converting files pickle to proper db")
-        #     if verbose > 0:
-        #         pprint("files pickle not found in path, initializing")
-        #     self.files = []
-
         # Load configuration from disk into 'config' attribute
         try:
             self.config = load(path_join(self.config_path, "config.pkl"))
@@ -180,6 +167,35 @@ class Db:
         #          print("index still not built")
         self.save()
 
+    def from_pickle_to_db(self):
+            files_pickle_path = path_join(self.config_path, "files.pkl")
+            if exists(files_pickle_path):
+                if verbose:
+                    print("converting files pickle to proper db")
+                pickle_files = load(files_pickle_path)
+                for f in pickle_files:
+                    self.files[f['hash']] = [f]
+
+    def rebuild_names_db(self):
+        print("Building names database")
+        try:
+            rm(self.names_db_path)
+        except FileNotFoundError as e:
+            pass
+        self.file_names = SqliteDict(self.names_db_path, autocommit=False)
+        for hash in self.files:
+            for document in self.files[hash]:
+                try:
+                    name = document['name']
+                    db_name_documents = self.file_names[name]
+                except KeyError as e:
+                    db_name_documents = []
+                    
+                db_name_documents.append(document)
+                self.file_names[name] = db_name_documents
+        print("read {} entries".format(len(self.files)))
+  
+
     def save(self):
         """Save db
 
@@ -193,6 +209,7 @@ class Db:
         #self.index = Index(pgpgram_db, slb=3, verbose=self.verbose)
         #save(self.index, path_join(self.data_path, "index.pkl"))
         self.files.commit()
+        self.file_names.commit()
         save(self.config, path_join(self.config_path, "config.pkl"))
 
     def search(self, query, 
@@ -244,13 +261,24 @@ class Db:
             print(result['subtitle'])
 
     def import_file(self, filename):
-        files = load(filename)
-        for f in files:
-            try: 
-                self.files[f['hash']]
-            except KeyError as e:
-                self.files[f['hash']] = [f]
-                print("adding {}".format(f['name']))
+        if filename.endswith("pkl"):
+            files = load(filename)
+            for f in files:
+                try: 
+                    self.files[f['hash']]
+                except KeyError as e:
+                    self.files[f['hash']] = [f]
+                    print("adding {}".format(f['name']))
+        else:
+            files = SqliteDict(filename, autocommit=False)
+            for k in files:
+                try: 
+                    self.files[k]
+                except KeyError as e:
+                    self.files[k] = files[k]
+                    print("adding {}".format(f['name']))
+            self.rebuild_names_db()
+               
         self.save()
 
 
@@ -331,10 +359,20 @@ class Backup:
                
             # Saving 
             # See https://github.com/RaRe-Technologies/sqlitedict/issues/110
+            
+            # Indexing with hash
             db_hash_document = self.db.files[self.document['hash']]
             db_hash_document.append(self.document)
             self.db.files[self.document['hash']] = db_hash_document
-
+            
+            # Indexing with name
+            try:
+                db_names_document = self.db.file_names[self.document['name']]
+            except KeyError as e:
+                db_names_document = []
+            db_names_document.append(self.document)
+            self.db.file_names[self.document['name']] = db_names_document
+ 
             self.db.save()
     
             # Close client
@@ -693,12 +731,17 @@ def youtube_backup(url, verbose):
         except Exception as e:
             print(type(e))
             print(e)
+            pass
+        
+        if not info:
+            return None
  
-
         prefix = ".".join(ydl.prepare_filename(info).split(".")[:-1])
         info_filename = ".".join([prefix, "pkl"])
         filename = next(f for f in ls() if f.startswith(prefix))
 
+
+        print("Backing up {}".format(filename))
         Backup(filename, verbose=verbose)
 
         save(info, info_filename)
@@ -709,8 +752,25 @@ def youtube_backup(url, verbose):
 
     video_backup = lambda url: video_url_backup(ydl, url)
 
-    is_present = lambda x: any(x in name for name in (f['name'] for k in db.files for f in db.files[k]))
-
+    def filter_new_videos(xs):
+        # try:
+        #     if db.file_names[x]:
+        #         return True
+        # except KeyError as e:
+        #     return any(x in name for name in (f['name'] for k in db.files for f in db.files[k])) 
+        #     return any(x in name for name in db.file_names) 
+        ys = cp(xs)
+        for name in db.file_names:
+            for x in xs:
+                if x in name:
+                    try:
+                        ys.remove(x)
+                    except ValueError as e:
+                        pass
+ 
+        print("{} of {} are new files".format(len(ys), len(xs)))
+        return ys 
+           
     info = ydl.extract_info(url, download=False)
     
     # Playlists
@@ -720,9 +780,11 @@ def youtube_backup(url, verbose):
         #futures = [executor.submit(video_backup, url) for url in urls]
         #wait(futures)
         
-        for e in info['entries']:
-            if e and not is_present(e['id']):
-                video_backup(e['id'])
+        entries = filter_new_videos([e['id'] for e in info['entries']])
+        for i,e in enumerate(entries):
+            print("checking for video {}: {}".format(i, e))
+            #if e and not is_present(e):
+            video_backup(e)
                 
     # Single videos
     else:
@@ -730,6 +792,36 @@ def youtube_backup(url, verbose):
             video_backup(info['id'])
         else:
             print("Video already backed up")
+
+
+def get_info(file=None):
+    db = Db(verbose)
+
+    if file:
+        try:
+            pprint(db.file_names[file])
+        except KeyError as e:
+            pass
+        try:
+            pprint(db.files[file])
+        except KeyError as e:
+            pass
+            
+        # for k in db.files:
+        #     for f in db.files[k]:
+        #         if args.filename == f['name'] or args.filename == f['hash']:
+        #             pprint(f)
+
+    else:
+
+        files = len(db.files)
+        keys_with_size = [k for k in db.files if any('size' in f for f in db.files[k])]
+        files_with_size = files - len(keys_with_size)
+        size = sum(f['size'] for k in keys_with_size for f in db.files[k])/1000000000
+        
+        info = "Files backed up: {}\nFiles which have size: {}\nTotal size (GB): {}".format(files, files_with_size, size)
+
+        print(info)
 
 
 # as script
@@ -900,22 +992,7 @@ def main():
         db = Db(verbose)
 
         if args.filename:
-
-            for k in db.files:
-                for f in db.files[k]:
-                    if args.filename == f['name'] or args.filename == f['hash']:
-                        pprint(f)
-
-        else:
-
-            files = len(db.files)
-            files_with_size = files - len([k for k in db.files if any('size' in f for f in db.files[k])])
-            size = sum(f['size'] for k in db.files for f in db.files[k] if 'size' in f)/1000000000
-            
-            info = "Files backed up: {}\nFiles which have size: {}\nTotal size (GB): {}".format(files, files_with_size, size)
-
-            print(info)
-
+            get_info(args.filename)
 
     if args.command == "import":
         db = Db(verbose)

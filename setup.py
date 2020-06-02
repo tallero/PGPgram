@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name = "PGPgram",
-    version = "0.2.1",
+    version = "0.3",
     author = "Pellegrino Prevete",
     author_email = "pellegrinoprevete@gmail.com",
     description = "GPG encrypted backups on telegram",
