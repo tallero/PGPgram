@@ -26,6 +26,8 @@
 import inspect
 import logging
 import string
+from concurrent.futures import ProcessPoolExecutor as ppe
+from concurrent.futures import wait
 from datetime import datetime
 from getpass import getpass
 from os.path import abspath, basename, exists, dirname, getsize, isfile, isdir, realpath
@@ -680,6 +682,7 @@ def youtube_backup(url, verbose):
                "See https://github.com/ytdl-org/youtube-dl#how-do-i-pass-cookies-to-youtube-dl"))
     else:
         args["cookiefile"] = cookiefile
+        args['extract_flat'] = True
 
     ydl = youtube_dl(args)
 
@@ -690,6 +693,7 @@ def youtube_backup(url, verbose):
         except Exception as e:
             print(type(e))
             print(e)
+ 
 
         prefix = ".".join(ydl.prepare_filename(info).split(".")[:-1])
         info_filename = ".".join([prefix, "pkl"])
@@ -703,16 +707,27 @@ def youtube_backup(url, verbose):
         rm(filename)
         rm(info_filename)
 
+    video_backup = lambda url: video_url_backup(ydl, url)
+
     is_present = lambda x: any(x in name for name in (f['name'] for k in db.files for f in db.files[k]))
 
     info = ydl.extract_info(url, download=False)
-    if 'entries' in info.keys() and info['_type'] == 'playlist':
+    
+    # Playlists
+    if 'entries' in info and info['_type'] == 'playlist':
+        #urls = [e['url'] for e in info['entries'] if e and not is_present(e['id'])]
+        #executor = ppe(10)
+        #futures = [executor.submit(video_backup, url) for url in urls]
+        #wait(futures)
+        
         for e in info['entries']:
             if e and not is_present(e['id']):
-                video_url_backup(ydl, e['webpage_url'])
+                video_backup(e['id'])
+                
+    # Single videos
     else:
         if not is_present(info['id']):
-            video_url_backup(ydl, info['webpage_url'])
+            video_backup(info['id'])
         else:
             print("Video already backed up")
 
