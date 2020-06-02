@@ -56,7 +56,7 @@ from .td import Td
 from .color import Color
 
 name = "pgpgram"
-version = "0.3"
+version = "0.3.1"
 
 setproctitle(name)
 
