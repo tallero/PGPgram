@@ -993,6 +993,8 @@ def main():
 
         if args.filename:
             get_info(args.filename)
+        else:
+            get_info()
 
     if args.command == "import":
         db = Db(verbose)
