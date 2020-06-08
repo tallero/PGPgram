@@ -690,6 +690,27 @@ class Restore:
                 self.download_paths.append(event['local']['path'])
                 return True
 
+def video_url_backup(ydl, url):
+    video_info = ydl.extract_info(url, download=True)
+    
+    if not video_info:
+        raise Exception
+
+    prefix = ".".join(ydl.prepare_filename(video_info).split(".")[:-1])
+    info_filename = ".".join([prefix, "pkl"])
+    filename = next(f for f in ls() if f.startswith(prefix))
+
+
+    print("Backing up {}".format(filename))
+    Backup(filename, verbose=verbose)
+
+    save(video_info, info_filename)
+    Backup(info_filename, verbose=verbose)
+
+    rm(filename)
+    rm(info_filename)
+ 
+
 def youtube_backup(url, verbose):
     try:
         from youtube_dl import YoutubeDL as youtube_dl
@@ -712,7 +733,8 @@ def youtube_backup(url, verbose):
     #     credentials = db.config['youtube']
     # ydl = youtube_dl(credentials)
 
-    args = {"ignoreerrors":True}
+    args = {"ignoreerrors":True,
+            "extract_flat": True}
 
     cookiefile = path_join(db.config_path, "cookies.txt")
     if not exists(cookiefile):
@@ -720,45 +742,11 @@ def youtube_backup(url, verbose):
                "See https://github.com/ytdl-org/youtube-dl#how-do-i-pass-cookies-to-youtube-dl"))
     else:
         args["cookiefile"] = cookiefile
-        args['extract_flat'] = True
 
     ydl = youtube_dl(args)
-
-    def video_url_backup(ydl, url):
-
-        try:
-            info = ydl.extract_info(url, download=True)
-        except Exception as e:
-            print(type(e))
-            print(e)
-            pass
-        
-        if not info:
-            return None
- 
-        prefix = ".".join(ydl.prepare_filename(info).split(".")[:-1])
-        info_filename = ".".join([prefix, "pkl"])
-        filename = next(f for f in ls() if f.startswith(prefix))
-
-
-        print("Backing up {}".format(filename))
-        Backup(filename, verbose=verbose)
-
-        save(info, info_filename)
-        Backup(info_filename, verbose=verbose)
-
-        rm(filename)
-        rm(info_filename)
-
     video_backup = lambda url: video_url_backup(ydl, url)
 
     def filter_new_videos(xs):
-        # try:
-        #     if db.file_names[x]:
-        #         return True
-        # except KeyError as e:
-        #     return any(x in name for name in (f['name'] for k in db.files for f in db.files[k])) 
-        #     return any(x in name for name in db.file_names) 
         ys = cp(xs)
         for name in db.file_names:
             for x in xs:
@@ -781,10 +769,13 @@ def youtube_backup(url, verbose):
         #wait(futures)
         
         entries = filter_new_videos([e['id'] for e in info['entries']])
+        N = len(entries)
         for i,e in enumerate(entries):
-            print("checking for video {}: {}".format(i, e))
-            #if e and not is_present(e):
-            video_backup(e)
+            print(f'checking for video {i+1} of {N}: {e}')
+            try:
+                success = video_backup(e)
+            except Exception as exception:
+                pass
                 
     # Single videos
     else:
@@ -792,7 +783,6 @@ def youtube_backup(url, verbose):
             video_backup(info['id'])
         else:
             print("Video already backed up")
-
 
 def get_info(file=None):
     db = Db()
