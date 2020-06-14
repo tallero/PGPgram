@@ -690,7 +690,7 @@ class Restore:
                 self.download_paths.append(event['local']['path'])
                 return True
 
-def video_url_backup(ydl, url):
+def video_url_backup(ydl, url, verbose=False):
     video_info = ydl.extract_info(url, download=True)
     
     if not video_info:
@@ -744,7 +744,9 @@ def youtube_backup(url, verbose):
         args["cookiefile"] = cookiefile
 
     ydl = youtube_dl(args)
-    video_backup = lambda url: video_url_backup(ydl, url)
+    video_backup = lambda url: video_url_backup(ydl, url, verbose=verbose)
+
+    is_present = lambda x: any(x in name for name in (f['name'] for k in db.files for f in db.files[k]))
 
     def filter_new_videos(xs):
         ys = cp(xs)
@@ -780,7 +782,11 @@ def youtube_backup(url, verbose):
     # Single videos
     else:
         if not is_present(info['id']):
-            video_backup(info['id'])
+            try:
+                url = info['url']
+            except:
+                url = info['id']
+            video_backup(url)
         else:
             print("Video already backed up")
 
