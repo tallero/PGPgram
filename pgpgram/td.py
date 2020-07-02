@@ -27,6 +27,7 @@ from getpass import getpass
 from ctypes.util import find_library
 from ctypes import *
 import json
+from os.path import join as path_join
 from pprint import pprint
 from .color import Color
 
@@ -71,7 +72,14 @@ class Td:
         self.db_key = db_key
         self.verbosity_level = verbosity_level
         self.connected = False
-        tdjson = CDLL(tdjson_path + "/libtdjson.so")
+
+        try:
+            tdjson = CDLL("libtdjson.so")
+        except Exception as e:
+            if verbosity_level:
+                print(e)
+                print("using pre-built td")
+            tdjson = CDLL(path_join(tdjson_path, "libtdjson.so"))
 
         self.td_json_client_create = tdjson.td_json_client_create
         self.td_json_client_create.restype = c_void_p
