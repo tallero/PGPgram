@@ -281,7 +281,11 @@ class Td:
             None: if event read is not a message
         """
         if event['@type'] == 'updateNewMessage':
-            text = event['message']['content']['text']['text']
+            if 'message' in event and 'content' in event['message'] and 'text' in event['message']['content'] and 'text' in event['message']['content']['test']:
+                text = event['message']['content']['text']['text']
+            else:
+                pprint(event)
+                text = ""
             if (exact_text != None) and (exact_text == text):
                 return event['message']
             if (in_text != None) and (in_text in text):
