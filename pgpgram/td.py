@@ -281,7 +281,7 @@ class Td:
             None: if event read is not a message
         """
         if event['@type'] == 'updateNewMessage':
-            if 'message' in event and 'content' in event['message'] and 'text' in event['message']['content'] and 'text' in event['message']['content']['test']:
+            if 'message' in event and 'content' in event['message'] and 'text' in event['message']['content'] and 'text' in event['message']['content']['text']:
                 text = event['message']['content']['text']['text']
             else:
                 pprint(event)
