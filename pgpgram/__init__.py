@@ -309,6 +309,10 @@ class Backup:
             """Database class instance"""
             cd(self.db.config_path)
 
+            # Instantiates telegram client
+            td = Td(tdjson_path=self.db.executable_path, db_key=self.db.config["db key"], verbosity_level=verbose)
+            td.cycle(self.connected)
+
             # If not already, select backup chat
             if not "backup chat id" in self.db.config.keys():
                 print(color.set(color.BLUE, "\nInstructions: ") +
@@ -339,11 +343,6 @@ class Backup:
                                'size': size,
                                'digits': digits}}
             self.document["pieces"] = self.split(*split['args'], **split['kwargs']) 
-
-            # Instantiates telegram client
-            td = Td(tdjson_path=self.db.executable_path, db_key=self.db.config["db key"], verbosity_level=verbose)
-            td.cycle(self.connected)
-
 
             # Send files
             for i in range(self.document["pieces"]):
