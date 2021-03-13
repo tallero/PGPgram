@@ -698,6 +698,7 @@ def video_url_backup(ydl, url, verbose=False):
 
     prefix = ".".join(ydl.prepare_filename(video_info).split(".")[:-1])
     info_filename = ".".join([prefix, "pkl"])
+    print(ls())
     filename = next(f for f in ls() if f.startswith(prefix))
 
 
