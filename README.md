@@ -9,6 +9,8 @@
 
 Since version 0.2 it also backups youtube videos, playlist and whole channels.
 
+Version 0.4 packages a pre-built windows binary.
+
 ## Motivation
 
 I've come to hate telegram. At the beginning, they were like "we're gonna open source everything after some time, we care about privacy", then
