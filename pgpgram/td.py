@@ -28,7 +28,7 @@ from ctypes.util import find_library
 from ctypes import *
 import json
 from os.path import join as path_join
-from platform import machine
+from platform import system, machine
 from pprint import pprint
 from .color import Color
 
