@@ -13,7 +13,7 @@ depends=("${MINGW_PACKAGE_PREFIX}-python" "${MINGW_PACKAGE_PREFIX}-python-setpro
          "${MINGW_PACKAGE_PREFIX}-python-sqlitedict" "${MINGW_PACKAGE_PREFIX}-tdlib" )
 optdepends=('youtube-dl' "${MINGW_PACKAGE_PREFIX}-trovotutto")
 options=('staticlibs' 'strip' '!debug')
-makedepends=("${MINGW_PACKAGE_PREFIX}-python-setuptools")
+makedepends=("${MINGW_PACKAGE_PREFIX}-python-setuptools" "mingw-w64-x86_64-binutils")
 source=('pgpgram::git+https://github.com/tallero/pgpgram.git')
 sha256sums=('SKIP')
 
