@@ -1,19 +1,21 @@
 # Mantainer: Pellegrino Prevete <cGVsbGVncmlub3ByZXZldGVAZ21haWwuY29tCg== | base -d>
 
+mpp="${MINGW_PACKAGE_PREFIX}"
+
 _realname=pgpgram
 pkgbase=mingw-w64-${_realname}
-pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}")
+pkgname=("${mpp}-${_realname}")
 pkgver=0.3.1
 pkgrel=1
 pkgdesc='PGP encrypted backups on Telegram Cloud'
 arch=('any')
 url='https://github.com/tallero/pgpgram'
 license=('AGPL3')
-depends=("${MINGW_PACKAGE_PREFIX}-python" "${MINGW_PACKAGE_PREFIX}-python-setproctitle" 
-         "${MINGW_PACKAGE_PREFIX}-python-sqlitedict" "${MINGW_PACKAGE_PREFIX}-tdlib" )
-optdepends=('youtube-dl' "${MINGW_PACKAGE_PREFIX}-trovotutto")
+depends=("${mpp}-python" "${mpp}-python-setproctitle" 
+         "${mpp}-python-sqlitedict" "${mpp}-tdlib" )
+optdepends=('youtube-dl' "${mpp}-trovotutto")
 options=('staticlibs' 'strip' '!debug')
-makedepends=("${MINGW_PACKAGE_PREFIX}-python-setuptools" "mingw-w64-x86_64-binutils")
+makedepends=("${mpp}-python-setuptools" "${mpp}-binutils")
 source=('pgpgram::git+https://github.com/tallero/pgpgram.git')
 sha256sums=('SKIP')
 
