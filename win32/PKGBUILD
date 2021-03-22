@@ -1,5 +1,6 @@
 # Mantainer: Pellegrino Prevete <cGVsbGVncmlub3ByZXZldGVAZ21haWwuY29tCg== | base -d>
 
+mp="${MINGW_PREFIX}"
 mpp="${MINGW_PACKAGE_PREFIX}"
 
 _realname=pgpgram
@@ -21,7 +22,11 @@ sha256sums=('SKIP')
 
 package() {
   cd "${_realname}"
-  python3 setup.py install --root="${pkgdir}" --optimize=1
+  echo "${pkgdir}"
+  MSYS2_ARG_CONV_EXCL="--prefix;--install-scripts=;--install-platlib=" \
+  "${mp}"/bin/python3 setup.py install --optimize=1 \
+                                       --prefix="${mp}" \
+                                       --root="${pkgdir}" 
 }
 
 # vim: ts=2 sw=2 et:
