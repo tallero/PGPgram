@@ -48,6 +48,14 @@ After setting up pip, you can install *PGPgram* by simply typing in your termina
 
     # pip3 install pgpgram
 
+### Archlinux
+
+The packages `pgpgram` and `pgpgram-git` have been published on [AUR](https://aur.archlinux.org).
+
+### MinGW (Windows)
+
+The package `pgpgram` has been published on [MinGW AUR](https://gitlab.com/mingw-aur).
+
 ## Usage
 
 *PGPgram* install a command line utility with the same name, `pgpgram`, that can be used to `backup`, `restore`, and `list` files. You can invoke command line help with `pgpgram --help` and get command options with
