@@ -42,14 +42,14 @@ from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 from pprint import pprint
 from random import SystemRandom as random
-from setproctitle import setproctitle
-from sqlitedict import SqliteDict
 from subprocess import Popen, PIPE
 from subprocess import check_output as sh
 from subprocess import getoutput
 
 from appdirs import user_cache_dir, user_config_dir, user_data_dir
 from argparse import ArgumentParser
+from setproctitle import setproctitle
+from sqlitedict import SqliteDict
 from trovotutto import PGPgramDb, Index
 
 from .color import Color
