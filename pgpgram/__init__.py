@@ -36,35 +36,49 @@ from os.path import join as path_join
 from os import chdir as cd
 from os import listdir as ls
 from os import remove as rm
-from os import mkdir, symlink, getcwd
+from os import getcwd, makedirs, mkdir, symlink, umask
 from os import walk
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
 from pprint import pprint
 from random import SystemRandom as random
-from setproctitle import setproctitle
-from sqlitedict import SqliteDict
 from subprocess import Popen, PIPE
 from subprocess import check_output as sh
 from subprocess import getoutput
 
+from appdirs import user_cache_dir, user_config_dir, user_data_dir
 from argparse import ArgumentParser
+from setproctitle import setproctitle
+from sqlitedict import SqliteDict
 from trovotutto import PGPgramDb, Index
-from xdg import BaseDirectory
 
-from .td import Td
 from .color import Color
+from .config import Config
+from .td import Td
 
 name = "pgpgram"
 version = "0.4"
 
 setproctitle(name)
 
+config = Config()
 color = Color()
+
+
+def mkdirs(newdir, mode=0o700):
+    """Perche' non ci sta -p in os.mkdir"""
+    original_umask = umask(0)
+    try:
+        makedirs(newdir, mode)
+    except OSError:
+        pass
+    finally:
+        umask(original_umask)
+
 
 def save(variable, path):
     """Save variable on given path using Pickle
-    
+   
     Args:
         variable: what to save
         path (str): path of the output
@@ -109,12 +123,12 @@ class Db:
         verbose (int): level of
     """
 
-    config_path = BaseDirectory.save_config_path(name)
-    data_path = BaseDirectory.save_data_path(name)
-    cache_path = BaseDirectory.save_cache_path(name)
+    config_path = config.get_config_dir()
+    data_path = config.get_data_dir()
+    cache_path = config.get_cache_dir()
     executable_path = dirname(realpath(__file__))
-    files_db_path = path_join(BaseDirectory.save_config_path(name), "files.db")
-    names_db_path = path_join(BaseDirectory.save_config_path(name), "names.db")
+    files_db_path = path_join(config.get_config_dir(), "files.db")
+    names_db_path = path_join(config.get_config_dir(), "names.db")
 
     def __init__(self, verbose=0):
         self.verbose = verbose
@@ -166,6 +180,8 @@ class Db:
         #     if verbose > 0:
         #          print("index still not built")
         self.save()
+
+    
 
     def from_pickle_to_db(self):
             files_pickle_path = path_join(self.config_path, "files.pkl")
