@@ -1,27 +1,32 @@
 # Mantainer: Pellegrino Prevete <cGVsbGVncmlub3ByZXZldGVAZ21haWwuY29tCg== | base -d>
 
+mp="${MINGW_PREFIX}"
 mpp="${MINGW_PACKAGE_PREFIX}"
 
 _realname=pgpgram
 pkgbase=mingw-w64-${_realname}
 pkgname=("${mpp}-${_realname}")
-pkgver=0.3.1
+pkgver=0.4
 pkgrel=1
 pkgdesc='PGP encrypted backups on Telegram Cloud'
 arch=('any')
 url='https://github.com/tallero/pgpgram'
 license=('AGPL3')
-depends=("${mpp}-python" "${mpp}-python-setproctitle" 
+depends=("${mpp}-python" "${mpp}-python-appdirs" "${mpp}-python-setproctitle" 
          "${mpp}-python-sqlitedict" "${mpp}-tdlib" )
 optdepends=('youtube-dl' "${mpp}-trovotutto")
 options=('staticlibs' 'strip' '!debug')
 makedepends=("${mpp}-python-setuptools" "${mpp}-binutils")
-source=('pgpgram::git+https://github.com/tallero/pgpgram.git')
+source=('pgpgram::git+https://github.com/tallero/pgpgram.git#branch=win32')
 sha256sums=('SKIP')
 
 package() {
   cd "${_realname}"
-  python3 setup.py install --root="${pkgdir}" --optimize=1
+  echo "${pkgdir}"
+  MSYS2_ARG_CONV_EXCL="--prefix;--install-scripts=;--install-platlib=" \
+  "${mp}"/bin/python3 setup.py install --optimize=1 \
+                                       --prefix="${mp}" \
+                                       --root="${pkgdir}" 
 }
 
 # vim: ts=2 sw=2 et:
