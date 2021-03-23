@@ -12,12 +12,12 @@ pkgdesc='PGP encrypted backups on Telegram Cloud'
 arch=('any')
 url='https://github.com/tallero/pgpgram'
 license=('AGPL3')
-depends=("${mpp}-python" "${mpp}-appdirs" "${mpp}-python-setproctitle" 
+depends=("${mpp}-python" "${mpp}-python-appdirs" "${mpp}-python-setproctitle" 
          "${mpp}-python-sqlitedict" "${mpp}-tdlib" )
 optdepends=('youtube-dl' "${mpp}-trovotutto")
 options=('staticlibs' 'strip' '!debug')
 makedepends=("${mpp}-python-setuptools" "${mpp}-binutils")
-source=('pgpgram::git+https://github.com/tallero/pgpgram.git')
+source=('pgpgram::git+https://github.com/tallero/pgpgram.git#branch=win32')
 sha256sums=('SKIP')
 
 package() {
