@@ -134,6 +134,7 @@ class Td:
                       'new_verbosity_level': verbosity_level, 
                       '@extra': 1.01234})
 
+        self.cycle(lambda x: self.connected)
 
 
     def on_fatal_error_callback(self, error_message):
