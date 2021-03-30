@@ -40,6 +40,7 @@ from os import getcwd, makedirs, mkdir, symlink, umask
 from os import walk
 from pickle import dump as pickle_dump
 from pickle import load as pickle_load
+from platform import system
 from pprint import pprint
 from random import SystemRandom as random
 from subprocess import Popen, PIPE
@@ -169,8 +170,12 @@ class Db:
             if not exists(tdlib_dir):
                 mkdir(tdlib_dir)
                 mkdir(tdlib_documents_dir)
-                symlink(tdlib_dir, tdlib_config_symlink)
-                symlink(tdlib_documents_dir, tdlib_documents_symlink)
+                try:
+                    symlink(tdlib_dir, tdlib_config_symlink)
+                    symlink(tdlib_documents_dir, tdlib_documents_symlink)
+                except FileExistsError as error:
+                    if system('Windows'):
+                        pass
 
 
         # Load index
