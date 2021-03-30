@@ -331,8 +331,9 @@ class Td:
                             - td, an instance of this class 
                             - event, an event got through 'receive'
         """
+        funcname = function.__name__
         if self.verbosity_level >= 2:
-            print("cycling", function.__name__)
+            print(f"cycling {funcname}")
         while True:
             event = self.receive()
             # handle an incoming update or an answer to a previously sent request
@@ -347,6 +348,7 @@ class Td:
                 if self.verbosity_level >= 2 and res: print(res)
 
                 if self.connected:
+                    print(f"executing {function.__name__}")
                     if function(self, event):
                         if self.verbosity_level >= 2:
                             print("finished", function.__name__)
