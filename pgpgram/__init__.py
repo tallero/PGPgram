@@ -333,6 +333,11 @@ class Backup:
             # Instantiates telegram client
             td = Td(tdjson_path=self.db.executable_path, db_key=self.db.config["db key"], verbosity_level=verbose)
 
+            def connected(event):
+                return td.connected
+
+            td.cycle(connected)
+
             # If not already, select backup chat
             if not "backup chat id" in self.db.config.keys():
                 print(color.set(color.BLUE, "\nInstructions: ") +
