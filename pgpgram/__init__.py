@@ -231,6 +231,8 @@ class Db:
         #save(self.index, path_join(self.data_path, "index.pkl"))
         self.files.commit()
         self.file_names.commit()
+        self.file_names.close()
+        del self.file_names
         save(self.config, path_join(self.config_path, "config.pkl"))
 
     def search(self, query, 
